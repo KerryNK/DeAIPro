@@ -39,7 +39,12 @@ const SubnetExplorer = () => {
         fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/subnets`)
             .then(res => res.json())
             .then(data => {
-                setSubnets(data);
+                if (Array.isArray(data)) {
+                    setSubnets(data);
+                } else {
+                    console.error("API returned non-array data:", data);
+                    setSubnets([]);
+                }
                 setLoading(false);
             })
             .catch(err => {

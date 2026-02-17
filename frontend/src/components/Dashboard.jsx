@@ -77,7 +77,7 @@ const Dashboard = () => {
         fetchData();
     }, []);
 
-    if (loading) return <div className="cont">Loading dashboard...</div>;
+    // if (loading) return <div className="cont">Loading dashboard...</div>;
 
     // Prepare Chart Data
     const sortedByMcap = [...subnets].sort((a, b) => b.mc - a.mc).slice(0, 10);
@@ -169,6 +169,8 @@ const Dashboard = () => {
             borderRadius: 4
         }]
     };
+
+    if (loading) return <div className="cont">Loading dashboard...</div>;
 
     return (
         <div id="overview-view" className="view act">

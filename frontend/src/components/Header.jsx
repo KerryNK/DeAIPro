@@ -17,8 +17,8 @@ const Header = ({ onLogin, onToggleMenu }) => {
                 const statsData = await statsRes.json();
                 const subnetsData = await subnetsRes.json();
 
-                setTaoPrice('$' + statsData.tao_price.toFixed(2));
-                setTaoChange((statsData.tao_price_change_24h > 0 ? '+' : '') + statsData.tao_price_change_24h + '%');
+                setTaoPrice('$' + (statsData?.tao_price?.toFixed(2) || '...'));
+                setTaoChange((statsData?.tao_price_change_24h > 0 ? '+' : '') + (statsData?.tao_price_change_24h || '...') + '%');
 
                 // Prepare ticker data (top 20 by momentum, mock momentum if missing)
                 // The mock data provided to backend might not have momentum, let's check.
