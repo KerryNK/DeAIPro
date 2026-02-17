@@ -1723,3 +1723,41 @@ body {
         display: block;
     }
 }
+
+/* Expanded Row Scores */
+.exp-scores {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px
+}
+
+.exp-score {
+    text-align: center
+}
+
+.exp-score-l {
+    font-size: 9px;
+    color: var(--mute);
+    margin-bottom: 4px;
+    text-transform: uppercase
+}
+
+.exp-score-v {
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace
+}
+
+.exp-score-bar {
+    height: 4px;
+    background: var(--bg4);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden
+}
+
+.exp-score-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s
+}
