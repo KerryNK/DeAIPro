@@ -11,7 +11,7 @@ import LoginModal from './components/LoginModal'
 
 function App() {
   const [activeView, setActiveView] = useState('overview')
-  const [isLoginOpen, setIsLoginOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const renderView = () => {
     switch (activeView) {
@@ -27,9 +27,18 @@ function App() {
 
   return (
     <>
-      <Header onLogin={() => setIsLoginOpen(true)} />
+      <Header onLogin={() => setIsLoginOpen(true)} onToggleMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
       <div className="main">
-        <Sidebar activeView={activeView} setActiveView={setActiveView} />
+        <Sidebar
+          activeView={activeView}
+          setActiveView={(view) => {
+            setActiveView(view)
+            setIsMobileMenuOpen(false)
+          }}
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+        />
+        <div className={`overlay ${isMobileMenuOpen ? 'open' : ''}`} onClick={() => setIsMobileMenuOpen(false)}></div>
         <main className="cont">
           {renderView()}
         </main>

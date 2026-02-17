@@ -36,7 +36,7 @@ const SubnetExplorer = () => {
     const [isSortOpen, setIsSortOpen] = useState(false);
 
     useEffect(() => {
-        fetch('http://localhost:8000/api/subnets')
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/subnets`)
             .then(res => res.json())
             .then(data => {
                 setSubnets(data);
@@ -127,59 +127,61 @@ const SubnetExplorer = () => {
 
                 <div className="pill-g" id="pillG"></div>
 
-                <table className="tbl">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Subnet</th>
-                            <th>Grade</th>
-                            <th className="sortable" onClick={() => handleSort('score')}>Score {getSortIndicator('score')}</th>
-                            <th className="sortable" onClick={() => handleSort('alpha')}>Price {getSortIndicator('alpha')}</th>
-                            <th className="sortable" onClick={() => handleSort('mc')}>M.Cap {getSortIndicator('mc')}</th>
-                            <th className="sortable" onClick={() => handleSort('em')}>Emission {getSortIndicator('em')}</th>
-                            <th className="sortable" onClick={() => handleSort('apy')}>APY {getSortIndicator('apy')}</th>
-                            <th className="sortable" onClick={() => handleSort('alpha')}>α/EM {getSortIndicator('alpha')}</th>
-                            <th className="sortable" onClick={() => handleSort('fundamental')}>Fund {getSortIndicator('fundamental')}</th>
-                            <th className="sortable" onClick={() => handleSort('sharpe')}>Sharpe {getSortIndicator('sharpe')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedSubnets.map((sub, index) => {
-                            const apy = calcAPY(sub);
-                            const sharpe = calcSharpe(sub);
-                            const scoreColor = sub.score >= 70 ? 'var(--green)' : sub.score >= 50 ? 'var(--cyan)' : 'var(--amber)';
-                            const apyColor = apy >= 25 ? 'var(--green)' : apy >= 15 ? 'var(--amber)' : 'var(--rose)';
-                            const sharpeColor = sharpe >= 1.0 ? 'var(--green)' : sharpe >= 0.5 ? 'var(--amber)' : 'var(--rose)';
-                            const fundColor = sub.fundamental >= 70 ? 'var(--green)' : 'var(--amber)';
+                <div className="tbl-container">
+                    <table className="tbl">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Subnet</th>
+                                <th>Grade</th>
+                                <th className="sortable" onClick={() => handleSort('score')}>Score {getSortIndicator('score')}</th>
+                                <th className="sortable" onClick={() => handleSort('alpha')}>Price {getSortIndicator('alpha')}</th>
+                                <th className="sortable" onClick={() => handleSort('mc')}>M.Cap {getSortIndicator('mc')}</th>
+                                <th className="sortable" onClick={() => handleSort('em')}>Emission {getSortIndicator('em')}</th>
+                                <th className="sortable" onClick={() => handleSort('apy')}>APY {getSortIndicator('apy')}</th>
+                                <th className="sortable" onClick={() => handleSort('alpha')}>α/EM {getSortIndicator('alpha')}</th>
+                                <th className="sortable" onClick={() => handleSort('fundamental')}>Fund {getSortIndicator('fundamental')}</th>
+                                <th className="sortable" onClick={() => handleSort('sharpe')}>Sharpe {getSortIndicator('sharpe')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedSubnets.map((sub, index) => {
+                                const apy = calcAPY(sub);
+                                const sharpe = calcSharpe(sub);
+                                const scoreColor = sub.score >= 70 ? 'var(--green)' : sub.score >= 50 ? 'var(--cyan)' : 'var(--amber)';
+                                const apyColor = apy >= 25 ? 'var(--green)' : apy >= 15 ? 'var(--amber)' : 'var(--rose)';
+                                const sharpeColor = sharpe >= 1.0 ? 'var(--green)' : sharpe >= 0.5 ? 'var(--amber)' : 'var(--rose)';
+                                const fundColor = sub.fundamental >= 70 ? 'var(--green)' : 'var(--amber)';
 
-                            return (
-                                <tr key={sub.id}>
-                                    <td className="rank">{index + 1}</td>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div className="subnet-icon">SN{sub.id}</div>
-                                            <div>
-                                                <div className="n">{sub.n}</div>
-                                                <div style={{ fontSize: '11px', color: 'var(--mute)' }}>{sub.cat}</div>
+                                return (
+                                    <tr key={sub.id}>
+                                        <td className="rank">{index + 1}</td>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div className="subnet-icon">SN{sub.id}</div>
+                                                <div>
+                                                    <div className="n">{sub.n}</div>
+                                                    <div style={{ fontSize: '11px', color: 'var(--mute)' }}>{sub.cat}</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={`grade ${getGradeClass(sub.score)}`}>{getGradeLabel(sub.score)}</span>
-                                    </td>
-                                    <td className="val" style={{ color: scoreColor, fontWeight: 700 }}>{sub.score}</td>
-                                    <td className="val" style={{ color: 'var(--cyan)' }}>${sub.alpha}</td>
-                                    <td className="val">${sub.mc}M</td>
-                                    <td className="val" style={{ color: 'var(--cyan)' }}>{sub.share}%</td>
-                                    <td className="val" style={{ color: apyColor, fontWeight: 600 }}>{apy.toFixed(1)}%</td>
-                                    <td className="val" style={{ color: 'var(--green)' }}>{sub.alpha}</td>
-                                    <td className="val" style={{ color: fundColor }}>{sub.fundamental}</td>
-                                    <td className="val" style={{ color: sharpeColor, fontWeight: 600 }}>{sharpe.toFixed(2)}</td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                                        </td>
+                                        <td>
+                                            <span className={`grade ${getGradeClass(sub.score)}`}>{getGradeLabel(sub.score)}</span>
+                                        </td>
+                                        <td className="val" style={{ color: scoreColor, fontWeight: 700 }}>{sub.score}</td>
+                                        <td className="val" style={{ color: 'var(--cyan)' }}>${sub.alpha}</td>
+                                        <td className="val">${sub.mc}M</td>
+                                        <td className="val" style={{ color: 'var(--cyan)' }}>{sub.share}%</td>
+                                        <td className="val" style={{ color: apyColor, fontWeight: 600 }}>{apy.toFixed(1)}%</td>
+                                        <td className="val" style={{ color: 'var(--green)' }}>{sub.alpha}</td>
+                                        <td className="val" style={{ color: fundColor }}>{sub.fundamental}</td>
+                                        <td className="val" style={{ color: sharpeColor, fontWeight: 600 }}>{sharpe.toFixed(2)}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             </section>
         </div>
     );

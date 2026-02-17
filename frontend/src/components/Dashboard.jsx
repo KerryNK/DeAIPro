@@ -58,8 +58,8 @@ const Dashboard = () => {
         const fetchData = async () => {
             try {
                 const [statsRes, subnetsRes] = await Promise.all([
-                    fetch('http://localhost:8000/api/stats'),
-                    fetch('http://localhost:8000/api/subnets')
+                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/stats`),
+                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/subnets`)
                 ]);
 
                 const statsData = await statsRes.json();

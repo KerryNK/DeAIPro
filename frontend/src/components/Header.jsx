@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const Header = ({ onLogin }) => {
+const Header = ({ onLogin, onToggleMenu }) => {
     const [taoPrice, setTaoPrice] = useState('...');
     const [taoChange, setTaoChange] = useState('...');
 
@@ -10,8 +10,8 @@ const Header = ({ onLogin }) => {
         const fetchData = async () => {
             try {
                 const [statsRes, subnetsRes] = await Promise.all([
-                    fetch('http://localhost:8000/api/stats'),
-                    fetch('http://localhost:8000/api/subnets')
+                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/stats`),
+                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/subnets`)
                 ]);
 
                 const statsData = await statsRes.json();
@@ -43,6 +43,11 @@ const Header = ({ onLogin }) => {
 
     return (
         <header className="hdr">
+            <button className="ham" onClick={onToggleMenu}>
+                <div className="ham-line"></div>
+                <div className="ham-line"></div>
+                <div className="ham-line"></div>
+            </button>
             <div className="logo">
                 <div className="logo-i" style={{ fontSize: '24px', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
                     τ

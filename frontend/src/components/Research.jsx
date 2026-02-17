@@ -6,7 +6,7 @@ const Research = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('http://localhost:8000/api/research')
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/research`)
             .then(res => res.json())
             .then(data => {
                 setArticles(data);
