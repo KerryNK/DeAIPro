@@ -12,6 +12,7 @@ import LoginModal from './components/LoginModal'
 function App() {
   const [activeView, setActiveView] = useState('overview')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isLoginOpen, setIsLoginOpen] = useState(false)
 
   const renderView = () => {
     switch (activeView) {
