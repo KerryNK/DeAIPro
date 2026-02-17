@@ -11,7 +11,16 @@ const News = () => {
                 setNews(data);
                 setLoading(false);
             })
-            .catch(err => setLoading(false));
+            .catch(err => {
+                console.error("Failed to fetch news:", err);
+                // Fallback data
+                setNews([
+                    { "tg": "Ecosystem", "t": "qBitTensor Labs Outlines Subnet Progress and Strategy", "s": "TAO Daily", "tm": "2 hours ago", "url": "https://taodaily.io/qbittensor-labs-outlines-subnet-progress-and-strategy-in-latest-bittensor-livestream/" },
+                    { "tg": "Market", "t": "Taostats Analysis Shows Root Claims Faster Than Promised", "s": "TAO Daily", "tm": "5 hours ago", "url": "https://taodaily.io/taostats-analysis-shows-bittensor-root-claims-are-faster-than-promised/" },
+                    { "tg": "Subnet", "t": "This Bittensor Subnet Just Went Up 999%", "s": "TAO Daily", "tm": "8 hours ago", "url": "https://taodaily.io/this-bittensor-tao-subnet-just-went-up-999/" }
+                ]);
+                setLoading(false);
+            });
     }, []);
 
     if (loading) return <div className="cont">Loading news...</div>;

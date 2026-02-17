@@ -12,7 +12,19 @@ const Research = () => {
                 setArticles(data);
                 setLoading(false);
             })
-            .catch(err => setLoading(false));
+            .catch(err => {
+                console.error("Failed to fetch research:", err);
+                // Fallback data
+                setArticles([
+                    {
+                        "i": "📈", "c": "Market Analysis", "t": "Q1 2026 Subnet Performance Review", "ex": "Comprehensive analysis of subnet emissions, valuations, and market trends across 58 active subnets.", "d": "Feb 12, 2026", "content": "<p>Content placeholder... (Full content available in implementation)</p>"
+                    },
+                    {
+                        "i": "🔬", "c": "Technical", "t": "Understanding Yuma Consensus Mechanism", "ex": "Deep dive into the revolutionary consensus algorithm that powers Bittensor's validation system.", "d": "Feb 8, 2026", "content": "<p>Content placeholder...</p>"
+                    }
+                ]);
+                setLoading(false);
+            });
     }, []);
 
     if (loading) return <div className="cont">Loading research...</div>;

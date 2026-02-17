@@ -48,5 +48,19 @@ async def get_academy():
 
 @app.get("/api/historical/btc")
 async def get_historical_btc():
-    # Mock data for chart
-    return {"data": []}
+    # Mock data for chart - 30 days of data
+    import random
+    from datetime import datetime, timedelta
+    
+    base_ratio = 0.00065
+    data = []
+    now = datetime.now()
+    
+    for i in range(30):
+        date = (now - timedelta(days=29-i)).strftime("%Y-%m-%d")
+        # Random walk
+        change = (random.random() - 0.5) * 0.00005
+        base_ratio += change
+        data.append({"date": date, "value": base_ratio})
+        
+    return {"data": data}
