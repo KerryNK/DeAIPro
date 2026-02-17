@@ -80,10 +80,10 @@ const Sidebar = ({ activeView, setActiveView, isOpen, onClose }) => {
             <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--bdr)' }}>
                 <div className="nav-hd">Community</div>
                 <div style={{ display: 'flex', gap: '10px', padding: '0 12px' }}>
-                    <a href="https://github.com/KerryNK/DeAIPro" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--txt2)', transition: 'color 0.2s' }}>
+                    <a href="https://github.com/DeAI-Labs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--txt2)', transition: 'color 0.2s' }}>
                         <Github size={20} />
                     </a>
-                    <a href="https://www.linkedin.com/in/kerry-kibagendi-5b128525b/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--txt2)', transition: 'color 0.2s' }}>
+                    <a href="https://www.linkedin.com/company/deai-strategies/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--txt2)', transition: 'color 0.2s' }}>
                         <Linkedin size={20} />
                     </a>
                 </div>
