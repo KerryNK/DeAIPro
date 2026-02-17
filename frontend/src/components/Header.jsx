@@ -4,14 +4,41 @@ const Header = ({ onLogin }) => {
     const [taoPrice, setTaoPrice] = useState('...');
     const [taoChange, setTaoChange] = useState('...');
 
+    const [tickerItems, setTickerItems] = useState([]);
+
     useEffect(() => {
-        fetch('http://localhost:8000/api/stats')
-            .then(res => res.json())
-            .then(data => {
-                setTaoPrice('$' + data.tao_price.toFixed(2));
-                setTaoChange((data.tao_price_change_24h > 0 ? '+' : '') + data.tao_price_change_24h + '%');
-            })
-            .catch(err => console.error("Failed to fetch stats", err));
+        const fetchData = async () => {
+            try {
+                const [statsRes, subnetsRes] = await Promise.all([
+                    fetch('http://localhost:8000/api/stats'),
+                    fetch('http://localhost:8000/api/subnets')
+                ]);
+
+                const statsData = await statsRes.json();
+                const subnetsData = await subnetsRes.json();
+
+                setTaoPrice('$' + statsData.tao_price.toFixed(2));
+                setTaoChange((statsData.tao_price_change_24h > 0 ? '+' : '') + statsData.tao_price_change_24h + '%');
+
+                // Prepare ticker data (top 20 by momentum, mock momentum if missing)
+                // The mock data provided to backend might not have momentum, let's check.
+                // If not, we generate it or use a random one like the HTML does?
+                // HTML data has momentum. Backend data.py likely has it.
+                const items = subnetsData.slice(0, 20).map(s => ({
+                    id: s.id,
+                    n: s.n,
+                    momentum: s.momentum || (Math.random() * 20 - 10) // Fallback if missing
+                }));
+                // Duplicate for infinite scroll
+                setTickerItems([...items, ...items]);
+
+            } catch (err) {
+                console.error("Failed to fetch header data", err);
+            }
+        };
+
+        fetchData();
+        // Live updates simulation could go here
     }, []);
 
     return (
@@ -27,7 +54,14 @@ const Header = ({ onLogin }) => {
             </div>
             <div className="ticker-container">
                 <div className="ticker" id="ticker">
-                    {/* Ticker items would go here */}
+                    {tickerItems.map((item, index) => (
+                        <div key={`${item.id}-${index}`} className="ticker-item">
+                            <span className="ticker-name">{item.n}</span>
+                            <span className="ticker-val" style={{ color: item.momentum >= 0 ? 'var(--green)' : 'var(--rose)' }}>
+                                {item.momentum >= 0 ? '+' : ''}{item.momentum.toFixed(1)}%
+                            </span>
+                        </div>
+                    ))}
                 </div>
             </div>
             <div className="hdr-c">

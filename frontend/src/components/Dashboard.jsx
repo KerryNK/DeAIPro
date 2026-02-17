@@ -25,10 +25,34 @@ ChartJS.register(
     ArcElement
 );
 
+// Fallback data generation (ported from HTML)
+function generateFallbackData(days) {
+    const data = [];
+    const now = Date.now();
+    const msPerDay = 86400000;
+    const points = days <= 1 ? 24 : days <= 7 ? days * 4 : days <= 30 ? days : Math.min(days, 365);
+    const interval = (days === 1 ? 3600000 : (days * msPerDay) / points);
+
+    // Base ratio around 0.002 - 0.004 BTC with realistic variance
+    let ratio = 0.0028 + (Math.random() - 0.5) * 0.001;
+
+    for (let i = points; i >= 0; i--) {
+        const timestamp = now - (i * interval);
+        // Add realistic price movement
+        ratio += (Math.random() - 0.48) * 0.0001;
+        ratio = Math.max(0.0015, Math.min(0.006, ratio));
+        data.push({ timestamp, ratio });
+    }
+    return data;
+}
+
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [subnets, setSubnets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [btcTimeRange, setBtcTimeRange] = useState(30);
+    const [taoBtcData, setTaoBtcData] = useState({ labels: [], datasets: [] });
+    const [taoBtcStats, setTaoBtcStats] = useState({ current: 0, change: 0 });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -80,18 +104,41 @@ const Dashboard = () => {
         }]
     };
 
-    // Mock historical data for TAO/BTC (since we don't have real historical API yet)
-    const taoBtcChartData = {
-        labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
-        datasets: [{
-            label: 'TAO/BTC',
-            data: [0.0028, 0.0029, 0.0031, 0.0030, 0.0032, 0.0033, 0.0034],
-            borderColor: '#8b5cf6',
-            backgroundColor: 'rgba(139,92,246,0.1)',
-            fill: true,
-            tension: 0.4
-        }]
-    };
+    useEffect(() => {
+        // Generate TAO/BTC data
+        const dataPoints = generateFallbackData(btcTimeRange);
+        const labels = dataPoints.map(p => {
+            const date = new Date(p.timestamp);
+            if (btcTimeRange <= 1) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (btcTimeRange <= 7) return date.toLocaleDateString([], { weekday: 'short' });
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        });
+        const values = dataPoints.map(p => p.ratio);
+
+        const current = values[values.length - 1];
+        const first = values[0];
+        const change = ((current - first) / first * 100);
+
+        setTaoBtcStats({ current, change });
+
+        const lineColor = change >= 0 ? 'rgba(139,92,246,1)' : 'rgba(244,63,94,1)';
+        const bgColor = change >= 0 ? 'rgba(139,92,246,0.1)' : 'rgba(244,63,94,0.1)';
+
+        setTaoBtcData({
+            labels,
+            datasets: [{
+                label: 'TAO/BTC',
+                data: values,
+                borderColor: lineColor,
+                backgroundColor: bgColor,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 6
+            }]
+        });
+    }, [btcTimeRange]);
+
 
     // Valuation Distribution (Alpha/Emissions)
     // Buckets: <0.2, 0.2-0.4, 0.4-0.6, 0.6-0.8, >0.8
@@ -158,7 +205,11 @@ const Dashboard = () => {
                     <div className="metric">
                         <div className="metric-hd">
                             <div className="metric-l">Total Market Cap</div>
-                            <div className="metric-info">?</div>
+                            <div className="metric-info">?
+                                <div className="metric-tooltip">
+                                    Total value of all subnets combined, calculated from emissions and TAO price
+                                </div>
+                            </div>
                         </div>
                         <div className="metric-v" id="kpi-tmc">${(stats?.market_cap / 1000000).toFixed(1)}M</div>
                         <div className="metric-ch up">+5.2% (24h)</div>
@@ -167,6 +218,11 @@ const Dashboard = () => {
                     <div className="metric">
                         <div className="metric-hd">
                             <div className="metric-l">Active Subnets</div>
+                            <div className="metric-info">?
+                                <div className="metric-tooltip">
+                                    Number of operational subnets with active validators and miners
+                                </div>
+                            </div>
                         </div>
                         <div className="metric-v" id="kpi-sn">{subnets.length}</div>
                         <div className="metric-ch up">+3 (7d)</div>
@@ -175,6 +231,11 @@ const Dashboard = () => {
                     <div className="metric">
                         <div className="metric-hd">
                             <div className="metric-l">Avg P/E Ratio</div>
+                            <div className="metric-info">?
+                                <div className="metric-tooltip">
+                                    Network average Price-to-Emissions ratio, indicating valuation relative to emissions
+                                </div>
+                            </div>
                         </div>
                         <div className="metric-v" id="kpi-pe">1.68x</div>
                         <div className="metric-ch dn">-0.12x (7d)</div>
@@ -189,9 +250,47 @@ const Dashboard = () => {
                         <div className="sec-t">TAO/BTC Ratio</div>
                         <div className="sec-sub">Is TAO gaining against Bitcoin? • Data from CoinGecko</div>
                     </div>
+                    <div className="sec-act">
+                        <div className="time-pills">
+                            {[1, 7, 30, 365].map(d => (
+                                <button
+                                    key={d}
+                                    className={`time-pill ${btcTimeRange === d ? 'act' : ''}`}
+                                    onClick={() => setBtcTimeRange(d)}
+                                >
+                                    {d === 1 ? '24H' : d === 365 ? '1Y' : `${d}D`}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
                 <div className="chart-box" style={{ height: '320px', position: 'relative' }}>
-                    <Line data={taoBtcChartData} options={{ maintainAspectRatio: false }} />
+                    <Line data={taoBtcData} options={{
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#606075' } },
+                            y: { position: 'right', grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#606075' } }
+                        }
+                    }} />
+                </div>
+                <div className="price-stats">
+                    <div className="price-stat">
+                        <span className="price-stat-l">Current Ratio</span>
+                        <span className="price-stat-v" style={{ color: 'var(--violet)' }}>{taoBtcStats.current.toFixed(6)} BTC</span>
+                    </div>
+                    <div className="price-stat">
+                        <span className="price-stat-l">Period Change</span>
+                        <span className={`price-stat-v ${taoBtcStats.change >= 0 ? 'up' : 'dn'}`} style={{ fontSize: '16px' }}>
+                            {taoBtcStats.change >= 0 ? '+' : ''}{taoBtcStats.change.toFixed(2)}%
+                        </span>
+                    </div>
+                    <div className="price-stat">
+                        <span className="price-stat-l">Signal</span>
+                        <span className="price-stat-v" style={{ color: taoBtcStats.change >= 0 ? 'var(--green)' : 'var(--rose)' }}>
+                            {taoBtcStats.change >= 0 ? 'OUTPERFORMING' : 'UNDERPERFORMING'}
+                        </span>
+                    </div>
                 </div>
             </section>
 

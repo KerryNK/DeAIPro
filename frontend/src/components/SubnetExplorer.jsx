@@ -1,9 +1,39 @@
 import React, { useState, useEffect } from 'react';
 
+// Calculations based on HTML logic
+const calcAPY = (s) => {
+    const baseAPY = 18;
+    const emissionBonus = (s.share / 5) * 8;
+    const competitionPenalty = Math.max(0, (s.validators - 30) * 0.1);
+    const qualityBonus = (s.score / 100) * 5;
+    let apy = baseAPY + emissionBonus - competitionPenalty + qualityBonus;
+
+    if (s.cat === 'Inference') apy *= 1.1;
+    if (s.cat === 'Storage') apy *= 0.95;
+    if (s.trend === 'up') apy *= 1.05;
+    if (s.trend === 'down') apy *= 0.92;
+
+    return Math.max(8, Math.min(85, apy));
+};
+
+const calcSharpe = (s) => {
+    const apy = calcAPY(s);
+    const riskFreeRate = 5;
+    const baseVolatility = 45;
+    const liquidityAdj = (100 - (s.liquidity || 50)) * 0.3; // Fallback if liquidity missing
+    const momentumAdj = Math.abs(s.momentum || 0) * 0.5;
+    const qualityAdj = (100 - s.score) * 0.2;
+    const volatility = baseVolatility + liquidityAdj + momentumAdj - qualityAdj;
+
+    const sharpe = (apy - riskFreeRate) / Math.max(10, volatility);
+    return Math.max(0.1, Math.min(2.0, sharpe));
+};
+
 const SubnetExplorer = () => {
     const [subnets, setSubnets] = useState([]);
     const [sortConfig, setSortConfig] = useState({ key: 'score', direction: 'desc' });
     const [loading, setLoading] = useState(true);
+    const [isSortOpen, setIsSortOpen] = useState(false);
 
     useEffect(() => {
         fetch('http://localhost:8000/api/subnets')
@@ -24,15 +54,28 @@ const SubnetExplorer = () => {
             direction = 'asc';
         }
         setSortConfig({ key, direction });
+        setIsSortOpen(false);
     };
 
     const sortedSubnets = [...subnets].sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-            return sortConfig.direction === 'asc' ? -1 : 1;
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+
+        // Derived metrics
+        if (sortConfig.key === 'apy') {
+            valA = calcAPY(a);
+            valB = calcAPY(b);
+        } else if (sortConfig.key === 'sharpe') {
+            valA = calcSharpe(a);
+            valB = calcSharpe(b);
+        } else if (sortConfig.key === 'alpha') {
+            // HTML logic: sort by alpha
+            valA = a.alpha;
+            valB = b.alpha;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-            return sortConfig.direction === 'asc' ? 1 : -1;
-        }
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
     });
 
@@ -66,7 +109,19 @@ const SubnetExplorer = () => {
                         <div className="sec-sub">Comprehensive subnet analytics and metrics • Click any row to expand</div>
                     </div>
                     <div className="sec-act">
-                        {/* Sort dropdown could go here, but column headers are sortable */}
+                        <div className="srt">
+                            <div className="srt-btn" onClick={() => setIsSortOpen(!isSortOpen)}>
+                                Sort by: {sortConfig.key.toUpperCase()}
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+                            </div>
+                            <div className={`srt-m ${isSortOpen ? 'open' : ''}`} id="srtM">
+                                <div className="srt-opt" onClick={() => handleSort('score')}>Score</div>
+                                <div className="srt-opt" onClick={() => handleSort('mc')}>Market Cap</div>
+                                <div className="srt-opt" onClick={() => handleSort('apy')}>APY</div>
+                                <div className="srt-opt" onClick={() => handleSort('sharpe')}>Sharpe Ratio</div>
+                                <div className="srt-opt" onClick={() => handleSort('alpha')}>Alpha</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -76,41 +131,53 @@ const SubnetExplorer = () => {
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>ID</th>
                             <th>Subnet</th>
                             <th>Grade</th>
-                            <th className="sortable" onClick={() => handleSort('score')} style={{ cursor: 'pointer' }}>Score {getSortIndicator('score')}</th>
-                            <th className="sortable" onClick={() => handleSort('alpha')} style={{ cursor: 'pointer' }}>Alpha {getSortIndicator('alpha')}</th>
-                            <th className="sortable" onClick={() => handleSort('mc')} style={{ cursor: 'pointer' }}>Market Cap {getSortIndicator('mc')}</th>
-                            <th className="sortable" onClick={() => handleSort('em')} style={{ cursor: 'pointer' }}>EM % {getSortIndicator('em')}</th>
-                            <th className="sortable" onClick={() => handleSort('val')} style={{ cursor: 'pointer' }}>Validators {getSortIndicator('val')}</th>
-                            {/* <th className="sortable" onClick={() => handleSort('aem')} style={{cursor:'pointer'}}>A/EM {getSortIndicator('aem')}</th> */}
+                            <th className="sortable" onClick={() => handleSort('score')}>Score {getSortIndicator('score')}</th>
+                            <th className="sortable" onClick={() => handleSort('alpha')}>Price {getSortIndicator('alpha')}</th>
+                            <th className="sortable" onClick={() => handleSort('mc')}>M.Cap {getSortIndicator('mc')}</th>
+                            <th className="sortable" onClick={() => handleSort('em')}>Emission {getSortIndicator('em')}</th>
+                            <th className="sortable" onClick={() => handleSort('apy')}>APY {getSortIndicator('apy')}</th>
+                            <th className="sortable" onClick={() => handleSort('alpha')}>α/EM {getSortIndicator('alpha')}</th>
+                            <th className="sortable" onClick={() => handleSort('fundamental')}>Fund {getSortIndicator('fundamental')}</th>
+                            <th className="sortable" onClick={() => handleSort('sharpe')}>Sharpe {getSortIndicator('sharpe')}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedSubnets.map((sub, index) => (
-                            <tr key={sub.id}>
-                                <td className="rank">{index + 1}</td>
-                                <td className="val">{sub.id}</td>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div className="subnet-icon">{sub.n.substring(0, 2).toUpperCase()}</div>
-                                        <div>
-                                            <div className="n">{sub.n}</div>
-                                            <div style={{ fontSize: '11px', color: 'var(--mute)' }}>{sub.cat}</div>
+                        {sortedSubnets.map((sub, index) => {
+                            const apy = calcAPY(sub);
+                            const sharpe = calcSharpe(sub);
+                            const scoreColor = sub.score >= 70 ? 'var(--green)' : sub.score >= 50 ? 'var(--cyan)' : 'var(--amber)';
+                            const apyColor = apy >= 25 ? 'var(--green)' : apy >= 15 ? 'var(--amber)' : 'var(--rose)';
+                            const sharpeColor = sharpe >= 1.0 ? 'var(--green)' : sharpe >= 0.5 ? 'var(--amber)' : 'var(--rose)';
+                            const fundColor = sub.fundamental >= 70 ? 'var(--green)' : 'var(--amber)';
+
+                            return (
+                                <tr key={sub.id}>
+                                    <td className="rank">{index + 1}</td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div className="subnet-icon">SN{sub.id}</div>
+                                            <div>
+                                                <div className="n">{sub.n}</div>
+                                                <div style={{ fontSize: '11px', color: 'var(--mute)' }}>{sub.cat}</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span className={`grade ${getGradeClass(sub.score)}`}>{getGradeLabel(sub.score)}</span>
-                                </td>
-                                <td className="val">{sub.score}</td>
-                                <td className="val">{sub.alpha}</td>
-                                <td className="val">${sub.mc}M</td>
-                                <td className="val">{sub.share}%</td>
-                                <td className="val">{sub.validators}</td>
-                            </tr>
-                        ))}
+                                    </td>
+                                    <td>
+                                        <span className={`grade ${getGradeClass(sub.score)}`}>{getGradeLabel(sub.score)}</span>
+                                    </td>
+                                    <td className="val" style={{ color: scoreColor, fontWeight: 700 }}>{sub.score}</td>
+                                    <td className="val" style={{ color: 'var(--cyan)' }}>${sub.alpha}</td>
+                                    <td className="val">${sub.mc}M</td>
+                                    <td className="val" style={{ color: 'var(--cyan)' }}>{sub.share}%</td>
+                                    <td className="val" style={{ color: apyColor, fontWeight: 600 }}>{apy.toFixed(1)}%</td>
+                                    <td className="val" style={{ color: 'var(--green)' }}>{sub.alpha}</td>
+                                    <td className="val" style={{ color: fundColor }}>{sub.fundamental}</td>
+                                    <td className="val" style={{ color: sharpeColor, fontWeight: 600 }}>{sharpe.toFixed(2)}</td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </section>
