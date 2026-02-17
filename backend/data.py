@@ -128,30 +128,481 @@ lessons = {
         "tag": "Module 1",
         "title": "Introduction to Bittensor",
         "meta": "15 min read • Beginner",
-        "content": "<p>Content placeholder...</p>"
+        "content": """
+<div class="lesson-section">
+<h3>What is Bittensor?</h3>
+<p>Bittensor is a revolutionary decentralized network that creates a marketplace for machine intelligence. Think of it as the "internet of AI" - a protocol that connects machine learning models together in a way that allows them to collaborate, compete, and improve collectively.</p>
+
+<h4>Key Concepts</h4>
+<ul>
+<li><strong>Decentralized AI:</strong> Unlike traditional AI systems controlled by single entities, Bittensor distributes AI capabilities across thousands of independent nodes</li>
+<li><strong>Proof of Intelligence:</strong> The network rewards contributors based on the quality and usefulness of their AI contributions</li>
+<li><strong>Subnets:</strong> Specialized networks within Bittensor focused on specific AI tasks (text generation, image processing, data analysis, etc.)</li>
+<li><strong>TAO Token:</strong> The native cryptocurrency that powers the network, used for incentives and governance</li>
+</ul>
+
+<h4>Why Bittensor Matters</h4>
+<p>Traditional AI development is centralized and expensive, controlled by a handful of tech giants. Bittensor democratizes AI by:</p>
+<ul>
+<li>Allowing anyone to contribute computing power and earn rewards</li>
+<li>Creating open, permissionless access to advanced AI capabilities</li>
+<li>Fostering innovation through competitive market dynamics</li>
+<li>Ensuring no single entity controls the future of artificial intelligence</li>
+</ul>
+
+<h4>The Network Architecture</h4>
+<p>Bittensor operates through three main participant types:</p>
+<ul>
+<li><strong>Miners:</strong> Provide AI models and computing resources to serve requests</li>
+<li><strong>Validators:</strong> Evaluate miner performance and distribute rewards</li>
+<li><strong>Users:</strong> Access AI services by paying with TAO</li>
+</ul>
+</div>
+
+<div class="lesson-section">
+<h3>How the Ecosystem Works</h3>
+<p>The Bittensor ecosystem operates as a peer-to-peer marketplace where intelligence is the commodity. Validators query miners with tasks, miners respond with their best solutions, and validators score these responses. High-performing miners earn more TAO emissions.</p>
+
+<p>This creates a self-improving system where the best AI models naturally rise to the top through market selection, rather than through centralized curation.</p>
+
+<h4>Getting Started</h4>
+<p>To participate in Bittensor, you can:</p>
+<ul>
+<li>Run a miner to contribute AI capabilities and earn TAO</li>
+<li>Become a validator to help secure the network and earn rewards</li>
+<li>Invest in TAO or subnet tokens</li>
+<li>Use Bittensor-powered applications and services</li>
+</ul>
+</div>
+"""
     },
     "subnet": {
         "tag": "Module 2",
         "title": "Subnet Architecture",
         "meta": "25 min read • Intermediate",
-        "content": "<p>Content placeholder...</p>"
+        "content": """
+<div class="lesson-section">
+<h3>Architectural Foundations of Bittensor Subnets</h3>
+<p>Subnets represent Bittensor's answer to the <strong>specialization-generalization tradeoff</strong> inherent in distributed systems. Rather than forcing all network participants to compete on identical tasks, subnets create purpose-built competitive environments optimized for specific AI capabilities.</p>
+
+<h4>The Subnet Abstraction Layer</h4>
+<p>Each subnet operates as a semi-autonomous network with its own:</p>
+<ul>
+<li><strong>Incentive Mechanism:</strong> Custom reward functions defining what constitutes "good" performance</li>
+<li><strong>Validation Logic:</strong> Specific criteria for scoring miner outputs</li>
+<li><strong>Task Distribution:</strong> Unique query patterns and workload characteristics</li>
+<li><strong>Alpha Token:</strong> Subnet-specific token representing proportional ownership</li>
+</ul>
+
+<h4>Technical Architecture</h4>
+<p>Subnets are implemented as <strong>Substrate pallets</strong> that inherit from the core Bittensor runtime while extending custom functionality:</p>
+
+<div class="code-block">
+SubnetState {
+  netuid: u16,                    // Unique subnet identifier
+  tempo: u16,                     // Block interval for consensus
+  emission: u64,                  // TAO allocation per tempo
+  max_allowed_uids: u16,          // Miner/validator capacity
+  min_allowed_weights: u16,       // Minimum stake requirement
+  immunity_period: u16,           // Protection period for new registrants
+}
+</div>
+
+<h4>Emission Dynamics</h4>
+<p>The root network (SN0) allocates emissions across subnets based on validator stake-weighted voting. This creates a <strong>two-layer incentive structure</strong>:</p>
+<ul>
+<li><strong>Inter-subnet competition:</strong> Subnets compete for emission share from root validators</li>
+<li><strong>Intra-subnet competition:</strong> Miners compete for emission share within their subnet</li>
+</ul>
+
+<p>This mechanism ensures resources flow toward subnets demonstrating genuine utility, as validators with significant stake (and thus skin in the game) direct emissions toward high-performing networks.</p>
+
+<h4>Registration and Participation</h4>
+<p>Subnet participation requires:</p>
+<ul>
+<li><strong>Proof-of-Work Registration:</strong> Computational commitment preventing Sybil attacks</li>
+<li><strong>Minimum Stake:</strong> Economic bond ensuring participant alignment</li>
+<li><strong>UID Assignment:</strong> Network identity within the subnet's address space</li>
+</ul>
+
+<p>The UID system creates a competitive marketplace where underperforming participants are replaced by new entrants, maintaining network quality through continuous selection pressure.</p>
+</div>
+
+<div class="lesson-section">
+<h3>Consensus Mechanisms: Yuma Consensus Deep Dive</h3>
+<p><strong>Yuma Consensus</strong> represents Bittensor's novel approach to decentralized quality assessment. Unlike traditional blockchain consensus (which validates transactions), Yuma validates <em>intelligence</em>—a fundamentally subjective and multidimensional quantity.</p>
+
+<h4>The Consensus Challenge</h4>
+<p>Evaluating AI output quality faces several challenges:</p>
+<ul>
+<li>No objective "ground truth" for many AI tasks</li>
+<li>Evaluators may have varying expertise levels</li>
+<li>Collusion attacks can corrupt quality signals</li>
+<li>Task difficulty varies, affecting score comparability</li>
+</ul>
+
+<h4>Yuma's Solution: Stake-Weighted Agreement</h4>
+<p>Yuma Consensus aggregates validator assessments using stake-weighted voting with outlier resistance:</p>
+
+<div class="code-block">
+consensus_weight[i] = Σ (stake[v] × W[v,i]) / Σ stake[v]
+
+where:
+- W[v,i] = validator v's weight assigned to miner i
+- stake[v] = validator v's staked TAO
+- Outlier weights are clipped using median-based bounds
+</div>
+
+<h4>Incentive Compatibility</h4>
+<p>The mechanism is designed to be <strong>incentive-compatible</strong>: validators maximize their own rewards by providing honest, accurate assessments. Deviating from consensus reduces validator dividends, creating economic pressure toward truthful evaluation.</p>
+
+<p>This represents a practical implementation of <strong>mechanism design principles</strong> from economics, applied to the novel domain of decentralized intelligence markets.</p>
+</div>
+"""
     },
     "mining": {
         "tag": "Module 3",
         "title": "Mining & Validation",
         "meta": "30 min read • Advanced",
-        "content": "<p>Content placeholder...</p>"
+        "content": """
+<div class="lesson-section">
+<h3>Mining: The Production Layer of Decentralized AI</h3>
+<p>Miners in Bittensor serve as the <strong>productive capacity</strong> of the network—they deploy AI models, allocate compute resources, and respond to queries in exchange for TAO emissions. Understanding mining economics and optimization is essential for both operators and investors.</p>
+
+<h4>Miner Architecture</h4>
+<p>A production-grade mining operation consists of several components:</p>
+<ul>
+<li><strong>Axon Server:</strong> Network-facing endpoint that receives validator queries</li>
+<li><strong>Model Inference:</strong> The actual AI model(s) generating responses</li>
+<li><strong>Resource Manager:</strong> GPU/CPU allocation and queue management</li>
+<li><strong>Monitoring Stack:</strong> Prometheus/Grafana for operational visibility</li>
+</ul>
+
+<h4>Hardware Requirements</h4>
+<p>Hardware requirements vary dramatically by subnet. Representative configurations:</p>
+
+<div class="code-block">
+Text Generation (SN1):
+- GPU: NVIDIA A100 80GB or H100
+- RAM: 128GB+ DDR5
+- Storage: 2TB NVMe SSD
+- Network: 1Gbps symmetric minimum
+
+Compute-Heavy (SN27):
+- GPU: 4-8x A100/H100 cluster
+- RAM: 512GB+
+- Storage: High-speed NVMe array
+- Network: 10Gbps+ recommended
+</div>
+
+<h4>Economic Analysis</h4>
+<p>Mining profitability depends on the intersection of:</p>
+<ul>
+<li><strong>Emission share:</strong> Percentage of subnet emissions earned</li>
+<li><strong>TAO price:</strong> USD value of emissions received</li>
+<li><strong>Operational costs:</strong> Hardware, electricity, bandwidth, labor</li>
+<li><strong>Performance rank:</strong> Position relative to competing miners</li>
+</ul>
+
+<p>Sophisticated operators model these variables continuously, adjusting deployment strategies as conditions change. The marginal miner (lowest-performing participant earning emissions) sets the effective "difficulty" for a subnet.</p>
+</div>
+
+<div class="lesson-section">
+<h3>Validation: The Coordination Layer</h3>
+<p>Validators perform the critical function of <strong>quality assessment and reward distribution</strong>. They query miners, evaluate responses, and submit weights to the consensus mechanism.</p>
+
+<h4>Validator Responsibilities</h4>
+<ul>
+<li><strong>Query Generation:</strong> Creating representative task samples for miners</li>
+<li><strong>Response Evaluation:</strong> Scoring miner outputs using subnet-specific criteria</li>
+<li><strong>Weight Submission:</strong> Publishing assessments to the Bittensor blockchain</li>
+<li><strong>Stake Management:</strong> Maintaining sufficient stake for consensus participation</li>
+</ul>
+
+<h4>Delegation Economics</h4>
+<p>Validators earn two income streams:</p>
+<ul>
+<li><strong>Validation Rewards:</strong> Proportion of subnet emissions for consensus work</li>
+<li><strong>Delegation Fees:</strong> Commission on staker dividends (typically 9-18%)</li>
+</ul>
+
+<p>Delegators (passive stakers) choose validators based on performance history, fee rates, and trust. This creates a competitive market for validation services, improving overall network quality.</p>
+
+<h4>Risk Factors for Validators</h4>
+<ul>
+<li><strong>Slashing Risk:</strong> Penalties for malicious or negligent behavior</li>
+<li><strong>Consensus Divergence:</strong> Reduced rewards for outlier assessments</li>
+<li><strong>Operational Downtime:</strong> Missed tempo cycles reduce earnings</li>
+<li><strong>Competition:</strong> New validators entering reduces individual share</li>
+</ul>
+</div>
+"""
     },
     "economics": {
         "tag": "Module 4",
         "title": "Tokenomics & Economics",
         "meta": "28 min read • Intermediate",
-        "content": "<p>Content placeholder...</p>"
+        "content": """
+<div class="lesson-section">
+<h3>TAO Token Economics: A Framework Analysis</h3>
+<p>TAO represents the <strong>economic coordination layer</strong> of the Bittensor network. Understanding its tokenomics is essential for evaluating investment opportunities and predicting network dynamics.</p>
+
+<h4>Supply Mechanics</h4>
+<p>TAO follows a <strong>Bitcoin-inspired emission schedule</strong>:</p>
+<ul>
+<li><strong>Maximum Supply:</strong> 21,000,000 TAO (hard cap)</li>
+<li><strong>Current Circulating:</strong> ~10.6M TAO (50.5% of max)</li>
+<li><strong>Block Time:</strong> 12 seconds</li>
+<li><strong>Halving Schedule:</strong> Emissions halve approximately every 4 years</li>
+</ul>
+
+<div class="code-block">
+Emission Schedule:
+Year 0-4:   ~7,200 TAO/day
+Year 4-8:   ~3,600 TAO/day
+Year 8-12:  ~1,800 TAO/day
+...continuing until max supply
+</div>
+
+<h4>Value Accrual Mechanisms</h4>
+<p>TAO accrues value through multiple channels:</p>
+<ul>
+<li><strong>Staking Demand:</strong> Validators and delegators lock TAO for yield</li>
+<li><strong>Registration Burns:</strong> POW registration consumes TAO</li>
+<li><strong>Network Effects:</strong> More subnets/users increase utility demand</li>
+<li><strong>Scarcity:</strong> Diminishing emissions create supply constraints</li>
+</ul>
+
+<h4>Stake Distribution Analysis</h4>
+<p>Stake concentration affects network security and reward distribution:</p>
+<ul>
+<li><strong>Top 10 validators:</strong> ~35% of total stake</li>
+<li><strong>Top 50 validators:</strong> ~70% of total stake</li>
+<li><strong>Gini Coefficient:</strong> ~0.65 (moderately concentrated)</li>
+</ul>
+
+<p>This distribution reflects both early-mover advantages and genuine performance differentiation. Monitoring stake concentration helps assess centralization risks.</p>
+</div>
+
+<div class="lesson-section">
+<h3>Alpha Tokens: Subnet-Level Economics</h3>
+<p>Each subnet issues <strong>alpha tokens</strong> representing proportional ownership of that subnet's emission stream. Alpha economics create a secondary investment layer within Bittensor.</p>
+
+<h4>Alpha Pricing Dynamics</h4>
+<p>Alpha token prices are determined by:</p>
+<ul>
+<li><strong>Emission Share:</strong> Percentage of network emissions allocated to subnet</li>
+<li><strong>Speculative Premium:</strong> Market expectations of future performance</li>
+<li><strong>Liquidity Conditions:</strong> Trading depth and market maker activity</li>
+<li><strong>Correlation with TAO:</strong> Alpha prices partially track TAO movements</li>
+</ul>
+
+<h4>The Alpha/Emissions Relationship</h4>
+<p>The <strong>alpha/emissions ratio</strong> (α/ε) provides a valuation framework:</p>
+
+<div class="code-block">
+α/ε = Alpha Price / Emission Share %
+
+Example:
+Subnet A: α = $0.15, ε = 9.7% → α/ε = 0.015 (undervalued)
+Subnet B: α = $0.50, ε = 2.0% → α/ε = 0.250 (fairly valued)
+Subnet C: α = $0.80, ε = 1.5% → α/ε = 0.533 (expensive)
+</div>
+
+<p>Lower ratios indicate cheaper exposure to emission streams, representing potential value opportunities for sophisticated investors.</p>
+
+<h4>Investment Implications</h4>
+<p>Alpha token investing requires consideration of:</p>
+<ul>
+<li><strong>Emission sustainability:</strong> Will the subnet maintain its share?</li>
+<li><strong>Team execution:</strong> Can operators improve performance?</li>
+<li><strong>Competitive dynamics:</strong> How do peer subnets compare?</li>
+<li><strong>TAO correlation:</strong> Alpha returns = subnet-specific + TAO beta</li>
+</ul>
+</div>
+"""
     },
     "valuation": {
         "tag": "Module 5",
         "title": "Valuation Methods",
         "meta": "35 min read • Advanced",
-        "content": "<p>Content placeholder...</p>"
+        "content": """
+<div class="lesson-section">
+<h3>Institutional-Grade Subnet Valuation</h3>
+<p>Valuing Bittensor subnets requires adapting traditional financial frameworks to the unique characteristics of decentralized AI networks. This module presents methodologies used by institutional investors and quantitative funds.</p>
+
+<h4>Fundamental Challenges</h4>
+<p>Subnet valuation differs from traditional asset valuation in several key ways:</p>
+<ul>
+<li><strong>No direct cash flows:</strong> Subnets generate TAO emissions, not USD revenue</li>
+<li><strong>Volatile numeraire:</strong> TAO price fluctuates, affecting emission value</li>
+<li><strong>Competitive dynamics:</strong> Emission share can change with new entrants</li>
+<li><strong>Network dependency:</strong> Subnet value tied to overall network health</li>
+</ul>
+
+<h4>Valuation Framework Overview</h4>
+<p>We employ a multi-factor approach combining:</p>
+<ul>
+<li><strong>Emission-Based Models:</strong> DCF/NPV of projected emission streams</li>
+<li><strong>Relative Valuation:</strong> P/E and α/ε ratio comparisons</li>
+<li><strong>Option Theory:</strong> Valuing growth optionality and pivot potential</li>
+<li><strong>Network Effects:</strong> Metcalfe's Law applications to subnet adoption</li>
+</ul>
+</div>
+
+<div class="lesson-section">
+<h3>Discounted Cash Flow (DCF) for Subnets</h3>
+<p>The <strong>DCF model</strong> projects future emission values and discounts them to present value. This approach treats emissions as analogous to dividends.</p>
+
+<h4>Model Construction</h4>
+<div class="code-block">
+NPV = Σ [E(t) × P(t)] / (1 + r)^t
+
+where:
+E(t) = Expected daily emissions in year t (TAO)
+P(t) = Expected TAO price in year t ($)
+r    = Discount rate (required return)
+t    = Time period (years)
+</div>
+
+<h4>Key Assumptions</h4>
+<ul>
+<li><strong>Emission Growth:</strong> 0-15% annually based on subnet performance</li>
+<li><strong>TAO Price Growth:</strong> Model conservatively (0-10% baseline)</li>
+<li><strong>Discount Rate:</strong> 20-35% reflecting crypto risk premium</li>
+<li><strong>Terminal Value:</strong> Gordon Growth Model or exit multiple</li>
+</ul>
+
+<h4>Sensitivity Analysis</h4>
+<p>DCF outputs are highly sensitive to inputs. Always run scenarios:</p>
+<ul>
+<li><strong>Base Case:</strong> Conservative growth, moderate discount rate</li>
+<li><strong>Bull Case:</strong> Optimistic growth, lower discount rate</li>
+<li><strong>Bear Case:</strong> Zero growth, high discount rate</li>
+</ul>
+
+<p>The range of outputs provides a valuation band for decision-making.</p>
+</div>
+
+<div class="lesson-section">
+<h3>Relative Valuation: P/E and α/ε Analysis</h3>
+<p>Relative valuation compares subnets to peers using standardized multiples.</p>
+
+<h4>Price-to-Emissions (P/E) Ratio</h4>
+<div class="code-block">
+P/E = Market Cap / Annual Emission Value
+    = Market Cap / (Daily Emissions × TAO Price × 365)
+
+Interpretation:
+P/E < 1.5x: Value zone (attractive)
+P/E 1.5-2.5x: Fair value (hold)
+P/E > 2.5x: Growth premium (requires justification)
+</div>
+
+<h4>Alpha/Emissions (α/ε) Ratio</h4>
+<div class="code-block">
+α/ε = Alpha Token Price / Emission Share %
+
+Interpretation:
+α/ε < 0.20: Undervalued
+α/ε 0.20-0.30: Fair value
+α/ε > 0.30: Expensive
+</div>
+
+<h4>Peer Comparison Framework</h4>
+<p>When comparing subnets:</p>
+<ul>
+<li>Group by category (inference, compute, data, etc.)</li>
+<li>Calculate category median ratios</li>
+<li>Identify outliers for further analysis</li>
+<li>Adjust for quality factors (GitHub activity, team, etc.)</li>
+</ul>
+
+<p>Subnets trading at discounts to category peers with similar quality metrics represent potential value opportunities.</p>
+</div>
+"""
+    },
+    "risk": {
+        "tag": "Module 6",
+        "title": "Risk Management",
+        "meta": "25 min read • Advanced",
+        "content": """
+<div class="lesson-section">
+<h3>Risk Taxonomy for Bittensor Investments</h3>
+<p>Effective risk management requires understanding the multiple risk dimensions affecting Bittensor investments. This module provides a systematic framework for risk identification, assessment, and mitigation.</p>
+
+<h4>Systematic Risks (Non-Diversifiable)</h4>
+<ul>
+<li><strong>Crypto Market Risk:</strong> TAO correlation with BTC/ETH (β ≈ 1.2-1.5)</li>
+<li><strong>Regulatory Risk:</strong> Potential classification as securities, mining restrictions</li>
+<li><strong>Protocol Risk:</strong> Smart contract vulnerabilities, consensus failures</li>
+<li><strong>Macro Risk:</strong> Interest rates, risk appetite, liquidity conditions</li>
+</ul>
+
+<h4>Idiosyncratic Risks (Diversifiable)</h4>
+<ul>
+<li><strong>Subnet-Specific Risk:</strong> Team execution, competitive displacement</li>
+<li><strong>Emission Risk:</strong> Changes in subnet's emission allocation</li>
+<li><strong>Technical Risk:</strong> Model quality degradation, infrastructure failures</li>
+<li><strong>Liquidity Risk:</strong> Inability to exit positions at fair value</li>
+</ul>
+</div>
+
+<div class="lesson-section">
+<h3>Quantitative Risk Metrics</h3>
+<h4>Value at Risk (VaR)</h4>
+<p>VaR estimates maximum expected loss over a time period at a confidence level:</p>
+
+<div class="code-block">
+Historical VaR (95%, 1-day) for TAO: ~8-12%
+Monte Carlo VaR incorporates correlation structure
+
+Position VaR = Position Size × Portfolio VaR
+</div>
+
+<h4>Sharpe Ratio</h4>
+<p>Risk-adjusted return measurement:</p>
+<div class="code-block">
+Sharpe = (Return - Risk-Free Rate) / Standard Deviation
+
+TAO Historical Sharpe: ~0.8-1.2 (annualized)
+Top subnet tokens: 0.5-1.5 range
+</div>
+
+<h4>Maximum Drawdown</h4>
+<p>Largest peak-to-trough decline:</p>
+<ul>
+<li>TAO Historical Max Drawdown: ~75% (2024 cycle)</li>
+<li>Subnet tokens: Up to 90% drawdowns observed</li>
+</ul>
+</div>
+
+<div class="lesson-section">
+<h3>Risk Mitigation Strategies</h3>
+<h4>Portfolio Construction</h4>
+<ul>
+<li><strong>Diversification:</strong> Hold 5-10 subnet positions across categories</li>
+<li><strong>Position Sizing:</strong> No single position > 20% of crypto allocation</li>
+<li><strong>Rebalancing:</strong> Quarterly rebalancing to target weights</li>
+<li><strong>Hedging:</strong> Consider TAO perpetual shorts for beta neutrality</li>
+</ul>
+
+<h4>Operational Risk Controls</h4>
+<ul>
+<li><strong>Cold Storage:</strong> Majority of holdings in hardware wallets</li>
+<li><strong>Multi-sig:</strong> Large transactions require multiple approvals</li>
+<li><strong>Insurance:</strong> Consider crypto insurance for large positions</li>
+<li><strong>Monitoring:</strong> Real-time alerts for unusual activity</li>
+</ul>
+
+<h4>Exit Strategy Planning</h4>
+<ul>
+<li><strong>Stop-Loss Orders:</strong> Automated exits at predefined levels</li>
+<li><strong>Trailing Stops:</strong> Lock in gains while allowing upside</li>
+<li><strong>Time-Based Exits:</strong> Rebalance regardless of price levels</li>
+<li><strong>Liquidity Assessment:</strong> Exit timeline based on position size</li>
+</ul>
+</div>
+"""
     }
 }
