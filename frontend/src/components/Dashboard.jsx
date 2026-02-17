@@ -177,9 +177,9 @@ const Dashboard = () => {
                     <div className="price-icon">τ</div>
                     <div className="price-info">
                         <div className="price-l">TAO Price</div>
-                        <div className="price-v" id="taoPriceLive">${stats?.tao_price.toFixed(2)}</div>
+                        <div className="price-v" id="taoPriceLive">${stats?.tao_price?.toFixed(2) || '...'}</div>
                         <div className={`price-ch ${stats?.tao_price_change_24h > 0 ? 'up' : 'dn'}`}>
-                            {stats?.tao_price_change_24h > 0 ? '+' : ''}{stats?.tao_price_change_24h}% (24h)
+                            {stats?.tao_price_change_24h > 0 ? '+' : ''}{stats?.tao_price_change_24h || '...'}% (24h)
                         </div>
                     </div>
                 </div>
@@ -211,7 +211,7 @@ const Dashboard = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="metric-v" id="kpi-tmc">${(stats?.market_cap / 1000000).toFixed(1)}M</div>
+                        <div className="metric-v" id="kpi-tmc">${stats?.market_cap ? (stats.market_cap / 1000000).toFixed(1) : '0.0'}M</div>
                         <div className="metric-ch up">+5.2% (24h)</div>
                     </div>
 
