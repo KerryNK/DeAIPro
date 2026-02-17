@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import useSWR from 'swr';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -13,7 +12,6 @@ import {
     ArcElement
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
-import NewsWidget from './NewsWidget';
 
 ChartJS.register(
     CategoryScale,
@@ -26,8 +24,6 @@ ChartJS.register(
     Legend,
     ArcElement
 );
-
-const fetcher = (...args) => fetch(...args).then(res => res.json());
 
 // Fallback data generation (ported from HTML)
 function generateFallbackData(days) {
@@ -51,27 +47,40 @@ function generateFallbackData(days) {
 }
 
 const Dashboard = () => {
+    const [stats, setStats] = useState(null);
+    const [subnets, setSubnets] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [btcTimeRange, setBtcTimeRange] = useState(30);
     const [taoBtcData, setTaoBtcData] = useState({ labels: [], datasets: [] });
     const [taoBtcStats, setTaoBtcStats] = useState({ current: 0, change: 0 });
 
-    const { data: stats, error: statsError, isLoading: statsLoading } = useSWR(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/stats`,
-        fetcher,
-        { refreshInterval: 60000 }
-    );
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [statsRes, subnetsRes] = await Promise.all([
+                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/stats`),
+                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/subnets`)
+                ]);
 
-    const { data: subnets, error: subnetsError, isLoading: subnetsLoading } = useSWR(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/subnets`,
-        fetcher,
-        { refreshInterval: 300000 } // Refresh every 5 mins
-    );
+                const statsData = await statsRes.json();
+                const subnetsData = await subnetsRes.json();
 
-    const isLoading = statsLoading || subnetsLoading;
-    const isError = statsError || subnetsError;
+                setStats(statsData);
+                setSubnets(subnetsData);
+                setLoading(false);
+            } catch (err) {
+                console.error("Failed to fetch dashboard data", err);
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    // if (loading) return <div className="cont">Loading dashboard...</div>;
 
     // Prepare Chart Data
-    const sortedByMcap = subnets ? [...subnets].sort((a, b) => b.mc - a.mc).slice(0, 10) : [];
+    const sortedByMcap = [...subnets].sort((a, b) => b.mc - a.mc).slice(0, 10);
     const mcapChartData = {
         labels: sortedByMcap.map(s => `SN${s.id}`),
         datasets: [{
@@ -83,11 +92,9 @@ const Dashboard = () => {
     };
 
     const categories = {};
-    if (subnets) {
-        subnets.forEach(s => {
-            categories[s.cat] = (categories[s.cat] || 0) + s.em;
-        });
-    }
+    subnets.forEach(s => {
+        categories[s.cat] = (categories[s.cat] || 0) + s.em;
+    });
     const catChartData = {
         labels: Object.keys(categories),
         datasets: [{
@@ -134,17 +141,24 @@ const Dashboard = () => {
 
 
     // Valuation Distribution (Alpha/Emissions)
+    // Buckets: <0.2, 0.2-0.4, 0.4-0.6, 0.6-0.8, >0.8
     const buckets = { '<0.2': 0, '0.2-0.4': 0, '0.4-0.6': 0, '0.6-0.8': 0, '>0.8': 0 };
-    if (subnets) {
-        subnets.forEach(s => {
-            const val = s.alpha; // Assuming 'alpha' field represents the ratio or key metric
-            if (val < 0.2) buckets['<0.2']++;
-            else if (val < 0.4) buckets['0.2-0.4']++;
-            else if (val < 0.6) buckets['0.4-0.6']++;
-            else if (val < 0.8) buckets['0.6-0.8']++;
-            else buckets['>0.8']++;
-        });
-    }
+    subnets.forEach(s => {
+        const alphaEm = s.alpha / (s.share / 100 || 1); // Simple approximation if share is %
+        // Actually alpha is price, share is %. The ratio is alpha/share?
+        // "Alpha/Emissions ratio measures the cost efficiency... Formula: α/EM = Alpha Price / Emission Share %"
+        const ratio = s.alpha / (s.share || 1); // Avoid div by zero
+        // Wait, provided data has alpha values like 0.15, 0.50 etc. 
+        // The prompt says "Alpha/Emissions ratio... <0.20: Undervalued".
+        // Let's assume the 'alpha' field in data IS the ratio or related.
+        // Data: "alpha": 0.15. This looks like the ratio itself.
+        const val = s.alpha;
+        if (val < 0.2) buckets['<0.2']++;
+        else if (val < 0.4) buckets['0.2-0.4']++;
+        else if (val < 0.6) buckets['0.4-0.6']++;
+        else if (val < 0.8) buckets['0.6-0.8']++;
+        else buckets['>0.8']++;
+    });
 
     const valChartData = {
         labels: Object.keys(buckets),
@@ -156,23 +170,11 @@ const Dashboard = () => {
         }]
     };
 
-    if (isLoading) return (
-        <div className="cont" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column' }}>
-            <div className="loading-spinner"></div>
-            <div style={{ marginTop: '20px', color: 'var(--mute)' }}>Loading live TAO data...</div>
-        </div>
-    );
-
-    if (isError) return (
-        <div className="cont" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column' }}>
-            <div style={{ color: 'var(--rose)', marginBottom: '10px' }}>Unable to load real-time stats</div>
-            <div style={{ color: 'var(--mute)', fontSize: '14px' }}>Please check back later</div>
-        </div>
-    );
+    if (loading) return <div className="cont">Loading dashboard...</div>;
 
     return (
         <div id="overview-view" className="view act">
-            <div className="grid-3" style={{ marginBottom: '20px', gridTemplateColumns: '1fr 1fr 1.5fr' }}>
+            <div className="grid-2" style={{ marginBottom: '20px' }}>
                 <div className="price-box">
                     <div className="price-icon">τ</div>
                     <div className="price-info">
@@ -191,8 +193,6 @@ const Dashboard = () => {
                         <div className="price-ch up">+2.8% (24h)</div>
                     </div>
                 </div>
-                {/* News Widget integrated here */}
-                <NewsWidget />
             </div>
 
             <section className="sec">

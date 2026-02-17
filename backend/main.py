@@ -1,14 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 from data import subnets, news, research, lessons
 
-limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS configuration
 origins = [
@@ -27,8 +21,7 @@ app.add_middleware(
 )
 
 @app.get("/api/stats")
-@limiter.limit("60/minute")
-async def get_stats(request: Request):
+async def get_stats():
     return {
         "tao_price": 180.80,
         "market_cap": 847200000,
@@ -38,28 +31,23 @@ async def get_stats(request: Request):
     }
 
 @app.get("/api/subnets")
-@limiter.limit("60/minute")
-async def get_subnets(request: Request):
+async def get_subnets():
     return subnets
 
 @app.get("/api/news")
-@limiter.limit("60/minute")
-async def get_news(request: Request):
+async def get_news():
     return news
 
 @app.get("/api/research")
-@limiter.limit("60/minute")
-async def get_research(request: Request):
+async def get_research():
     return research
 
 @app.get("/api/academy")
-@limiter.limit("60/minute")
-async def get_academy(request: Request):
+async def get_academy():
     return lessons
 
 @app.get("/api/historical/btc")
-@limiter.limit("60/minute")
-async def get_historical_btc(request: Request):
+async def get_historical_btc():
     # Mock data for chart - 30 days of data
     import random
     from datetime import datetime, timedelta
