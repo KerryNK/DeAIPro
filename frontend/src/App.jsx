@@ -8,8 +8,9 @@ import Research from './components/Research'
 import Academy from './components/Academy'
 import News from './components/News'
 import LoginModal from './components/LoginModal'
+import { AuthProvider } from './context/AuthContext'
 
-function App() {
+function AppContent() {
   const [activeView, setActiveView] = useState('overview')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
@@ -49,4 +50,10 @@ function App() {
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  )
+}
