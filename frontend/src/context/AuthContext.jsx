@@ -1,25 +1,38 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isRestricted, setIsRestricted] = useState(true);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Check for persisted user on mount
+    // Monitor Firebase Auth State
     useEffect(() => {
-        const storedUser = localStorage.getItem('deai_user');
-        if (storedUser) {
-            try {
-                const parsedUser = JSON.parse(storedUser);
-                setUser(parsedUser);
-                checkAccess(parsedUser.email);
-            } catch (e) {
-                console.error("Failed to parse stored user", e);
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser) {
+                // User is signed in
+                const userData = {
+                    name: currentUser.displayName,
+                    email: currentUser.email,
+                    photo: currentUser.photoURL,
+                    uid: currentUser.uid
+                };
+                setUser(userData);
+                checkAccess(currentUser.email);
+                localStorage.setItem('deai_user', JSON.stringify(userData));
+            } else {
+                // User is signed out
+                setUser(null);
+                setIsRestricted(true);
                 localStorage.removeItem('deai_user');
             }
-        }
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
     }, []);
 
     const checkAccess = (email) => {
@@ -33,21 +46,21 @@ export const AuthProvider = ({ children }) => {
         console.log(`User ${email} access check. Restricted: ${!hasFullAccess}`);
     };
 
-    const login = async (userData) => {
+    const login = async () => {
         setIsLoading(true);
-        // Simulate API call/processing
-        setTimeout(() => {
-            setUser(userData);
-            checkAccess(userData.email);
-            localStorage.setItem('deai_user', JSON.stringify(userData));
-            setIsLoading(false);
-        }, 500);
+        // Auth triggered via LoginModal directly using Firebase methods
+        // This function might be deprecated or used for manual login if needed
     };
 
-    const logout = () => {
-        setUser(null);
-        setIsRestricted(true);
-        localStorage.removeItem('deai_user');
+    const logout = async () => {
+        try {
+            await auth.signOut();
+            setUser(null);
+            setIsRestricted(true);
+            localStorage.removeItem('deai_user');
+        } catch (error) {
+            console.error("Error signing out: ", error);
+        }
     };
 
     return (

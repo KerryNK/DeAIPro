@@ -1,8 +1,40 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
+import firebase_admin
+from firebase_admin import credentials, auth
+import os
 from data import subnets, news, research, lessons
 
+# Initialize Firebase Admin
+# Expects serviceAccountKey.json in the same directory or pointed to by GOOGLE_APPLICATION_CREDENTIALS
+try:
+    if not firebase_admin._apps:
+        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccountKey.json")
+        if os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            print("Firebase Admin initialized successfully")
+        else:
+            print(f"Warning: {cred_path} not found. Firebase Auth will not work.")
+except Exception as e:
+    print(f"Error initializing Firebase Admin: {e}")
+
 app = FastAPI()
+
+security = HTTPBearer()
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        decoded_token = auth.verify_id_token(token)
+        return decoded_token
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid authentication credentials: {e}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 # CORS configuration
 origins = [
@@ -31,7 +63,7 @@ async def get_stats():
     }
 
 @app.get("/api/subnets")
-async def get_subnets():
+async def get_subnets(user: dict = Depends(get_current_user)):
     return subnets
 
 @app.get("/api/news")

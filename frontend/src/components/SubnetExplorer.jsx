@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { fetchWithAuth } from '../utils/api';
 
 // Calculations based on HTML logic
 const calcAPY = (s) => {
@@ -42,8 +43,7 @@ const SubnetExplorer = () => {
     const categories = ['All', 'Inference', 'Training', 'Storage', 'Compute', 'Data', 'Finance', 'Media', 'Social', 'Reasoning'];
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/subnets`)
-            .then(res => res.json())
+        fetchWithAuth('/api/subnets')
             .then(data => {
                 if (Array.isArray(data)) {
                     setSubnets(data);

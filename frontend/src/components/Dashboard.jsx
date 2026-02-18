@@ -46,6 +46,8 @@ function generateFallbackData(days) {
     return data;
 }
 
+import { fetchWithAuth } from '../utils/api';
+
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [subnets, setSubnets] = useState([]);
@@ -57,13 +59,10 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [statsRes, subnetsRes] = await Promise.all([
-                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/stats`),
-                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/subnets`)
+                const [statsData, subnetsData] = await Promise.all([
+                    fetchWithAuth('/api/stats'),
+                    fetchWithAuth('/api/subnets')
                 ]);
-
-                const statsData = await statsRes.json();
-                const subnetsData = await subnetsRes.json();
 
                 setStats(statsData);
                 setSubnets(subnetsData);

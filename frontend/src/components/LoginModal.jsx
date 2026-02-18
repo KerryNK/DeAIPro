@@ -1,24 +1,22 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { auth } from '../firebase';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const LoginModal = ({ isOpen, onClose }) => {
-    const { login } = useAuth();
     const [email, setEmail] = useState('');
+    const [error, setError] = useState('');
 
     if (!isOpen) return null;
 
-    const handleGoogleLogin = () => {
-        // Simulate Google Login
-        const mockUser = {
-            name: "DeAI User",
-            email: "user@example.com", // Default non-company email for testing restriction
-            photo: "https://lh3.googleusercontent.com/a/default-user"
-        };
-        // For testing "Full Access", uncomment below or use the input field
-        // mockUser.email = "founder@deaistrategies.io"; 
-
-        login(mockUser);
-        onClose();
+    const handleGoogleLogin = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+            onClose();
+        } catch (err) {
+            console.error("Google Sign-In Error:", err);
+            setError("Failed to sign in with Google. Check console for details.");
+        }
     };
 
     const handleEmailLogin = (e) => {
@@ -42,6 +40,8 @@ const LoginModal = ({ isOpen, onClose }) => {
                     <img src="https://developers.google.com/identity/images/g-logo.png" alt="G" style={{ width: '18px' }} />
                     Sign in with Google
                 </button>
+
+                {error && <div style={{ color: 'var(--rose)', fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>{error}</div>}
 
                 <div style={{ textAlign: 'center', color: 'var(--mute)', fontSize: '12px', margin: '16px 0' }}>OR</div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fetchWithAuth } from '../utils/api';
 
 const Header = ({ onLogin, onToggleMenu }) => {
     const [taoPrice, setTaoPrice] = useState('...');
@@ -9,13 +10,10 @@ const Header = ({ onLogin, onToggleMenu }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [statsRes, subnetsRes] = await Promise.all([
-                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/stats`),
-                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/subnets`)
+                const [statsData, subnetsData] = await Promise.all([
+                    fetchWithAuth('/api/stats'),
+                    fetchWithAuth('/api/subnets')
                 ]);
-
-                const statsData = await statsRes.json();
-                const subnetsData = await subnetsRes.json();
 
                 setTaoPrice('$' + (statsData?.tao_price?.toFixed(2) || '...'));
                 setTaoChange((statsData?.tao_price_change_24h > 0 ? '+' : '') + (statsData?.tao_price_change_24h || '...') + '%');
