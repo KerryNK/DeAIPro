@@ -5,7 +5,7 @@ import Dashboard from './components/Dashboard'
 import SubnetExplorer from './components/SubnetExplorer'
 import ValuationTools from './components/ValuationTools'
 import Research from './components/Research'
-import Academy from './components/Academy'
+import ReportGenerator from './components/ReportGenerator'
 import News from './components/News'
 import Reports from './components/Reports'
 import LoginModal from './components/LoginModal'
@@ -22,7 +22,7 @@ function AppContent() {
       case 'subnet': return <SubnetExplorer />
       case 'valuation': return <ValuationTools />
       case 'research': return <Research />
-      case 'academy': return <Academy />
+      case 'academy': return <ReportGenerator />
       case 'intelligence': return <News />
       case 'reports': return <Reports />
       default: return <Dashboard />

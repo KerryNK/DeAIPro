@@ -4,6 +4,7 @@ import {
     Search,
     Calculator,
     FileText,
+    Sparkles,
     GraduationCap,
     Newspaper,
     Lock,
@@ -24,7 +25,7 @@ const Sidebar = ({ activeView, setActiveView, isOpen, onClose }) => {
     const resources = [
         { id: 'research', icon: <FileText size={18} />, label: 'Research' },
         { id: 'reports', icon: <FileBarChart2 size={18} />, label: 'Reports' },
-        { id: 'academy', icon: <GraduationCap size={18} />, label: 'Academy' },
+        { id: 'academy', icon: <Sparkles size={18} />, label: 'Report Generator' },
         { id: 'intelligence', icon: <Newspaper size={18} />, label: 'Intelligence' },
     ];
 
