@@ -211,7 +211,7 @@ async def fetch_subnets_taostats():
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.get(
-                f"{TAOSTATS_BASE}/subnet/v1",
+                f"{TAOSTATS_BASE}/subnet/latest/v1",
                 params={"limit": 256, "order": "emission desc"},
                 headers=headers
             )
