@@ -3,7 +3,9 @@ import { useAuth } from '../context/AuthContext';
 
 
 const ValuationTools = () => {
-    const { isRestricted, openLoginModal } = useAuth();
+    const { isRestricted, openLoginModal, isLoading: authLoading } = useAuth();
+    const showOverlay = !authLoading && isRestricted;
+
 
     // Calculator States
     const [opex, setOpex] = useState(9125000);
@@ -68,7 +70,8 @@ const ValuationTools = () => {
 
     return (
         <div id="valuation-view" className="view act">
-            <div className={`blur-content ${isRestricted ? 'restricted' : ''}`}>
+            <div className={`blur-content ${showOverlay ? 'restricted' : ''}`}>
+
                 <section className="sec">
                     <div className="sec-hd">
                         <div>
@@ -445,7 +448,7 @@ const ValuationTools = () => {
                 </section>
             </div>
 
-            {isRestricted && (
+            {showOverlay && (
                 <div className="restriction-overlay">
                     <div className="restriction-box">
                         <div className="restriction-icon">🔒</div>

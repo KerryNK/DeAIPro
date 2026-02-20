@@ -1,42 +1,67 @@
 import React from 'react';
 import { fetchWithAuth } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const Header = ({ onLogin, onToggleMenu }) => {
-    const { user, logout } = useAuth();
-    const [taoPrice, setTaoPrice] = useState('...');
-    const [taoChange, setTaoChange] = useState('...');
+    const { user, logout, isLoading: authLoading } = useAuth();
+    const [taoPrice, setTaoPrice] = useState(null);
+    const [taoChange, setTaoChange] = useState(null);
+    const [netCap, setNetCap] = useState(null);
     const [tickerItems, setTickerItems] = useState([]);
+    const [dataStatus, setDataStatus] = useState('loading');
+    const [lastUpdated, setLastUpdated] = useState(null);
+    const [secAgo, setSecAgo] = useState(0);
+    const timerRef = useRef(null);
 
     useEffect(() => {
+        if (authLoading) return;
         const fetchData = async () => {
             try {
                 const [statsData, subnetsData] = await Promise.all([
                     fetchWithAuth('/api/stats'),
-                    fetchWithAuth('/api/subnets')
+                    fetchWithAuth('/api/subnets'),
                 ]);
-
-                setTaoPrice('$' + (statsData?.tao_price?.toFixed(2) || '...'));
-                setTaoChange((statsData?.tao_price_change_24h > 0 ? '+' : '') + (statsData?.tao_price_change_24h || '...') + '%');
-
-                const items = subnetsData.slice(0, 20).map(s => ({
-                    id: s.id,
-                    n: s.n,
-                    momentum: s.momentum || (Math.random() * 20 - 10)
+                setTaoPrice(statsData?.tao_price ?? null);
+                setTaoChange(statsData?.tao_price_change_24h ?? null);
+                setNetCap(statsData?.market_cap ?? null);
+                const items = (Array.isArray(subnetsData) ? subnetsData : []).slice(0, 20).map(s => ({
+                    id: s.id, n: s.n, momentum: s.momentum || (Math.random() * 20 - 10)
                 }));
                 setTickerItems([...items, ...items]);
+                setDataStatus('live');
+                setLastUpdated(Date.now());
+                setSecAgo(0);
             } catch (err) {
-                console.error('Failed to fetch header data', err);
+                console.error('Header fetch failed', err);
+                setDataStatus('delayed');
             }
         };
-
         fetchData();
         const interval = setInterval(fetchData, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [authLoading, user]);
 
-    // Get user initials for avatar
+    // Live "X sec ago" counter
+    useEffect(() => {
+        clearInterval(timerRef.current);
+        if (!lastUpdated) return;
+        timerRef.current = setInterval(() => {
+            setSecAgo(Math.floor((Date.now() - lastUpdated) / 1000));
+        }, 5000);
+        return () => clearInterval(timerRef.current);
+    }, [lastUpdated]);
+
+    const liveLabel = dataStatus === 'loading' ? '…'
+        : dataStatus === 'delayed' ? 'DELAYED'
+            : secAgo < 60 ? `${secAgo}s ago` : `${Math.floor(secAgo / 60)}m ago`;
+
+    const liveStyle = dataStatus === 'delayed'
+        ? { background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.25)', color: 'var(--amber)' }
+        : {};
+    const dotStyle = dataStatus === 'delayed'
+        ? { background: 'var(--amber)', animation: 'none' } : {};
+
     const getUserInitial = () => {
         if (user?.name) return user.name.charAt(0).toUpperCase();
         if (user?.email) return user.email.charAt(0).toUpperCase();
@@ -46,14 +71,10 @@ const Header = ({ onLogin, onToggleMenu }) => {
     return (
         <header className="hdr">
             <button className="ham" onClick={onToggleMenu}>
-                <div className="ham-line"></div>
-                <div className="ham-line"></div>
-                <div className="ham-line"></div>
+                <div className="ham-line" /><div className="ham-line" /><div className="ham-line" />
             </button>
             <div className="logo">
-                <div className="logo-i" style={{ fontSize: '24px', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
-                    τ
-                </div>
+                <div className="logo-i" style={{ fontSize: '24px', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>τ</div>
                 <div>
                     <div className="logo-t">DeAI <span>Nexus</span></div>
                     <div className="logo-s">Bittensor Intelligence</div>
@@ -75,28 +96,27 @@ const Header = ({ onLogin, onToggleMenu }) => {
                 <div className="stat">
                     <div>
                         <div className="stat-l">TAO Price</div>
-                        <div className="stat-v" id="taoP">{taoPrice}</div>
+                        <div className="stat-v" id="taoP">
+                            {taoPrice !== null ? `$${taoPrice.toFixed(2)}` : '—'}
+                        </div>
                     </div>
-                    <div className={`stat-ch ${taoChange.includes('+') ? 'up' : 'dn'}`} id="taoCh">{taoChange}</div>
+                    <div className={`stat-ch ${(taoChange ?? 0) >= 0 ? 'up' : 'dn'}`} id="taoCh">
+                        {taoChange !== null ? `${taoChange >= 0 ? '+' : ''}${taoChange.toFixed(2)}%` : '—'}
+                    </div>
                 </div>
                 <div className="stat">
                     <div>
                         <div className="stat-l">Network Cap</div>
-                        <div className="stat-v" id="netCap">$1.28B</div>
+                        <div className="stat-v" id="netCap">
+                            {netCap ? `$${(netCap / 1e9).toFixed(2)}B` : '—'}
+                        </div>
                     </div>
-                </div>
-                <div className="stat">
-                    <div>
-                        <div className="stat-l">24h Volume</div>
-                        <div className="stat-v" id="tradeVol">$8.4M</div>
-                    </div>
-                    <div className="stat-ch up" id="volCh">+12.3%</div>
                 </div>
             </div>
             <div className="hdr-r">
-                <div className="live">
-                    <div className="live-d"></div>
-                    <span id="liveTs">LIVE</span>
+                <div className="live" style={liveStyle}>
+                    <div className="live-d" style={dotStyle} />
+                    <span id="liveTs">{liveLabel}</span>
                 </div>
                 {user ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
