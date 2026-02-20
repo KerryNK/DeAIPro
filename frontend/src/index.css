@@ -800,8 +800,13 @@ body {
 
 /* ── Skeleton shimmer ──────────────────────────────────────────── */
 @keyframes shimmer {
-    0%   { background-position: -800px 0 }
-    100% { background-position:  800px 0 }
+    0% {
+        background-position: -800px 0
+    }
+
+    100% {
+        background-position: 800px 0
+    }
 }
 
 .skeleton {
@@ -1776,6 +1781,7 @@ body {
     border-radius: 2px;
     transition: width 0.3s
 }
+
 /* Access Control */
 .blur-content {
     filter: blur(5px);
@@ -1827,4 +1833,195 @@ body {
     font-size: 13px;
     color: var(--txt2);
     line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT MODE — applied when body.light (toggled from Sidebar dark mode btn)
+═══════════════════════════════════════════════════════════════════════════ */
+body.light {
+    --bg: #f4f4f8;
+    --bg2: #ebebf2;
+    --bg3: #e2e2ec;
+    --bg4: #d8d8e6;
+    --bg5: #cecede;
+    --bdr: #d0d0e0;
+    --bdr2: #b8b8cc;
+    --txt: #111118;
+    --txt2: #4a4a60;
+    --mute: #8888a0;
+    /* accent colours stay the same */
+}
+
+/* Adjust header and sidebar surfaces in light mode */
+body.light .hdr {
+    background: rgba(235, 235, 242, 0.95);
+    border-bottom-color: var(--bdr)
+}
+
+body.light .side {
+    background: var(--bg2);
+    border-right-color: var(--bdr)
+}
+
+body.light .metric {
+    background: var(--bg2);
+    border-color: var(--bdr)
+}
+
+body.light .sec {
+    background: var(--bg2);
+    border-color: var(--bdr)
+}
+
+body.light .skeleton {
+    background: linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%);
+    background-size: 800px 100%
+}
+
+/* Scrollbar in light mode */
+body.light ::-webkit-scrollbar-track {
+    background: var(--bg3)
+}
+
+body.light ::-webkit-scrollbar-thumb {
+    background: var(--bdr2)
+}
+
+/* Transition for smooth dark↔light switch */
+body,
+.hdr,
+.side,
+.metric,
+.sec,
+.tbl,
+.btn,
+.nav-i {
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.15s ease
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE  ≤ 768px
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+    /* Sidebar: off-canvas, slides in from left */
+    .side {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 200;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease
+    }
+
+    .side.open {
+        transform: translateX(0)
+    }
+
+    /* Dark overlay behind open sidebar */
+    .overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 199;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s
+    }
+
+    .overlay.open {
+        opacity: 1;
+        pointer-events: all
+    }
+
+    /* Main layout: single column, no sidebar indent */
+    .main {
+        flex-direction: column
+    }
+
+    .cont {
+        padding: 16px;
+        overflow-x: hidden
+    }
+
+    /* Header: compress */
+    .hdr {
+        padding: 0 16px;
+        height: 56px
+    }
+
+    /* Hide stat metrics in header on mobile */
+    .hdr-c {
+        display: none
+    }
+
+    /* Hamburger always visible */
+    .ham {
+        display: flex
+    }
+
+    /* Double-column metric grid → single column */
+    .grid-2 {
+        grid-template-columns: 1fr
+    }
+
+    /* Metric grid: 2 columns on tablet, 1 on phone */
+    .metric-g {
+        grid-template-columns: repeat(2, 1fr)
+    }
+
+    /* Price boxes: stack */
+    .price-box {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px
+    }
+
+    /* Table: horizontal scroll */
+    .tbl-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch
+    }
+
+    /* Ticker: hide on very small screens */
+    .ticker-container {
+        display: none
+    }
+
+    /* Chart boxes: shorter on mobile */
+    .chart-box {
+        height: 220px !important
+    }
+
+    /* Section headers: wrap cleanly */
+    .sec-hd {
+        flex-wrap: wrap;
+        gap: 10px
+    }
+
+    /* Time pills: slightly smaller */
+    .time-pill {
+        padding: 4px 8px;
+        font-size: 10px
+    }
+}
+
+@media (max-width: 480px) {
+    .metric-g {
+        grid-template-columns: 1fr
+    }
+
+    .cont {
+        padding: 12px
+    }
+
+    .sec {
+        padding: 14px
+    }
+
+    .chart-box {
+        height: 180px !important
+    }
 }

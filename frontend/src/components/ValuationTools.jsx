@@ -452,9 +452,9 @@ const ValuationTools = () => {
                 <div className="restriction-overlay">
                     <div className="restriction-box">
                         <div className="restriction-icon">🔒</div>
-                        <h3>Pro Access Required</h3>
-                        <p>Valuation tools are available exclusively to <b>DeAI Strategies</b> team members and Pro subscribers.</p>
-                        <button className="btn btn-p" onClick={openLoginModal}>Sign in to unlock</button>
+                        <h3>Sign In Required</h3>
+                        <p>Sign in with your <b>DeAI Strategies</b> account to access valuation tools and advanced analytics.</p>
+                        <button className="btn btn-p" onClick={openLoginModal}>Sign In</button>
                     </div>
                 </div>
             )}

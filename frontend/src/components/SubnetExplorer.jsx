@@ -339,9 +339,9 @@ const SubnetExplorer = () => {
                                                             <div className="restriction-overlay" style={{ backdropFilter: 'blur(3px)' }}>
                                                                 <div className="restriction-box" style={{ padding: '20px' }}>
                                                                     <div className="restriction-icon" style={{ fontSize: '24px', marginBottom: '10px' }}>🔒</div>
-                                                                    <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>Pro Access Required</h3>
-                                                                    <p style={{ fontSize: '12px', marginBottom: '12px' }}>Detailed subnet metrics are available to Pro subscribers.</p>
-                                                                    <button className="btn btn-p" style={{ fontSize: '12px', padding: '6px 16px' }} onClick={openLoginModal}>Unlock</button>
+                                                                    <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>Sign In Required</h3>
+                                                                    <p style={{ fontSize: '12px', marginBottom: '12px' }}>Sign in with your DeAI Strategies account to view detailed subnet analytics.</p>
+                                                                    <button className="btn btn-p" style={{ fontSize: '12px', padding: '6px 16px' }} onClick={openLoginModal}>Sign In</button>
                                                                 </div>
                                                             </div>
                                                         )}
