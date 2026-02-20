@@ -5,6 +5,7 @@ from pydantic import BaseModel
 import firebase_admin
 from firebase_admin import credentials, auth
 import os
+import asyncio
 import httpx
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -86,7 +87,7 @@ COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 TAOSTATS_API_KEY = os.getenv("TAOSTATS_API_KEY", "")
 TAOSTATS_BASE = "https://api.taostats.io/api"
 
-# ─── CoinGecko: TAO price ─────────────────────────────────────────────────────
+# ─── CoinGecko: TAO price ──────────────────────────────────────────────────────────
 async def fetch_tao_data():
     cached = get_cached("tao_stats", 60)
     if cached:
@@ -115,7 +116,7 @@ async def fetch_tao_data():
                 "tao_price": data.get("usd", 180.80),
                 "tao_price_btc": data.get("btc", 0.00065),
                 "tao_price_change_24h": round(data.get("usd_24h_change", 0), 2),
-                "market_cap": data.get("usd_market_cap", 847200000),
+                "market_cap": data.get("usd_market_cap", 1280000000),
                 "volume_24h": data.get("usd_24h_vol", 8400000),
             }
             set_cache("tao_stats", result)
@@ -126,26 +127,92 @@ async def fetch_tao_data():
             "tao_price": 180.80,
             "tao_price_btc": 0.00065,
             "tao_price_change_24h": 0.0,
-            "market_cap": 847200000,
+            "market_cap": 1280000000,
             "volume_24h": 8400000,
         }
 
-# ─── TaoStats: Subnets ────────────────────────────────────────────────────────
+# ─── CoinGecko: Bittensor ecosystem alpha tokens (subnet prices) ─────────────
+async def fetch_coingecko_subnets():
+    """Fetch all bittensor-ecosystem alpha tokens from CoinGecko.
+    Tokens use symbol pattern 'snXX' where XX is the subnet netuid.
+    Returns dict keyed by int netuid with live market data."""
+    cached = get_cached("cg_subnets", 300)  # 5-min cache
+    if cached:
+        return cached
+
+    headers = {}
+    if COINGECKO_API_KEY:
+        headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
+
+    result = {}
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # Fetch all pages (CoinGecko returns up to 250 per page)
+            for page in range(1, 4):  # max 3 pages = up to 750 tokens
+                resp = await client.get(
+                    f"{COINGECKO_BASE}/coins/markets",
+                    params={
+                        "vs_currency": "usd",
+                        "category": "bittensor-ecosystem",
+                        "order": "market_cap_desc",
+                        "per_page": 250,
+                        "page": page,
+                        "price_change_percentage": "24h,7d",
+                        "sparkline": "false",
+                    },
+                    headers=headers
+                )
+                resp.raise_for_status()
+                tokens = resp.json()
+                if not tokens:
+                    break
+
+                for t in tokens:
+                    sym = (t.get("symbol") or "").lower().strip()
+                    # Extract netuid from symbol like 'sn8', 'sn64', 'sn120'
+                    if sym.startswith("sn") and sym[2:].isdigit():
+                        netuid = int(sym[2:])
+                        mc_usd = t.get("market_cap") or 0
+                        result[netuid] = {
+                            "cg_id": t.get("id"),
+                            "n": t.get("name") or f"Subnet {netuid}",
+                            "mc": round(mc_usd / 1e6, 3),          # millions USD
+                            "price_usd": t.get("current_price") or 0,
+                            "price_change_24h": round(t.get("price_change_percentage_24h_in_currency") or 0, 2),
+                            "price_change_7d": round(t.get("price_change_percentage_7d_in_currency") or 0, 2),
+                            "volume_24h": t.get("total_volume") or 0,
+                            "circulating_supply": t.get("circulating_supply") or 0,
+                            "image": t.get("image") or "",
+                            "live": True,
+                        }
+
+                if len(tokens) < 250:
+                    break  # no more pages
+
+        print(f"CoinGecko subnets fetched: {len(result)} alpha tokens")
+        set_cache("cg_subnets", result)
+        return result
+    except Exception as e:
+        print(f"CoinGecko subnet fetch error: {e}")
+        return {}
+
+# ─── TaoStats: Subnet emissions & network data ─────────────────────────────
 async def fetch_subnets_taostats():
-    """Fetch live subnet statistics from TaoStats API."""
-    cached = get_cached("taostats_subnets", 300)  # 5-minute cache
+    """Fetch live subnet stats from TaoStats API (requires TAOSTATS_API_KEY).
+    Returns dict keyed by int netuid with emission/validator/miner data."""
+    cached = get_cached("taostats_subnets", 300)
     if cached:
         return cached
 
     if not TAOSTATS_API_KEY:
-        return None  # Fall back to static data
+        return None  # No key — fall through to CoinGecko + static data
 
     headers = {"Authorization": f"Bearer {TAOSTATS_API_KEY}"}
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.get(
                 f"{TAOSTATS_BASE}/subnet/v1",
-                params={"limit": 100, "order": "emission desc"},
+                params={"limit": 256, "order": "emission desc"},
                 headers=headers
             )
             resp.raise_for_status()
@@ -157,72 +224,143 @@ async def fetch_subnets_taostats():
                 netuid = s.get("netuid") or s.get("net_uid")
                 if netuid is None:
                     continue
-                result[int(netuid)] = {
-                    "id": int(netuid),
-                    "n": s.get("name") or s.get("subnet_name") or f"Subnet {netuid}",
-                    "mc": round(float(s.get("market_cap") or s.get("alpha_price_tao", 0)) / 1e6, 2),
+                nid = int(netuid)
+                result[nid] = {
+                    "n": s.get("name") or s.get("subnet_name") or f"Subnet {nid}",
                     "em": round(float(s.get("emission") or s.get("emission_tao", 0)), 2),
                     "share": round(float(s.get("emission_pct") or s.get("emission_share", 0)) * 100, 2),
                     "validators": int(s.get("validator_count") or s.get("num_validators", 0)),
                     "miners": int(s.get("miner_count") or s.get("num_miners", 0)),
-                    "alpha": round(float(s.get("alpha_price_tao") or 0.3), 4),
-                    "live": True,
+                    "alpha_tao": round(float(s.get("alpha_price_tao") or 0), 6),
                 }
 
             set_cache("taostats_subnets", result)
+            print(f"TaoStats subnets fetched: {len(result)} subnets")
             return result
     except Exception as e:
-        print(f"TaoStats fetch error: {e}. Using static data.")
+        print(f"TaoStats fetch error: {e}. Skipping.")
         return None
 
-# ─── Endpoints ────────────────────────────────────────────────────────────────
+# ─── Endpoints ────────────────────────────────────────────────────────────────────
 @app.get("/api/stats")
 async def get_stats():
+    """Public TAO market data. Also computes alpha ecosystem aggregate."""
     data = await fetch_tao_data()
+    # Fetch CoinGecko subnets concurrently for aggregate stats
+    cg = await fetch_coingecko_subnets()
+
+    active_subnets = len([s for s in static_subnets if s.get("em", 0) > 0])
+    if cg:
+        active_subnets = len(cg)  # live count from CG
+
+    sum_alpha_mc = sum(v["mc"] for v in cg.values()) if cg else 0
+    total_mc_usd = (data["market_cap"] / 1e6) + sum_alpha_mc  # TAO + all alpha
+
     return {
         "tao_price": data["tao_price"],
+        "tao_price_btc": data.get("tao_price_btc", 0),
         "market_cap": data["market_cap"],
         "volume_24h": data["volume_24h"],
         "tao_price_change_24h": data["tao_price_change_24h"],
         "volume_change_24h": 0.0,
+        "active_subnets": active_subnets,
+        "sum_alpha_mc": round(sum_alpha_mc, 2),           # $M
+        "total_ecosystem_mc": round(total_mc_usd, 2),     # $M
     }
 
 @app.get("/api/subnets")
 async def get_subnets(request: Request):
-    """Returns subnet data. All users get the public fields needed for the dashboard.
-    Authenticated @deaistrategies.io users also get the `restricted` flag set to False
-    so the frontend can show detailed expanded rows."""
+    """Returns enriched subnet list. Priority: CoinGecko live > TaoStats live > static.
+    All visitors get the full list; authenticated users get the `authenticated` flag."""
     user = await get_optional_user(request)
     is_authenticated = user is not None
 
-    tao_data = await fetch_tao_data()
-    tao_price = tao_data["tao_price"]
-
-    # Try TaoStats live data
-    live = await fetch_subnets_taostats()
+    # Fetch all sources concurrently
+    tao_data, cg, ts = await asyncio.gather(
+        fetch_tao_data(),
+        fetch_coingecko_subnets(),
+        fetch_subnets_taostats(),
+        return_exceptions=True
+    )
+    # Handle exceptions from gather
+    if isinstance(tao_data, Exception): tao_data = {"tao_price": 180.80}
+    if isinstance(cg, Exception): cg = {}
+    if isinstance(ts, Exception): ts = None
+    tao_price = tao_data.get("tao_price", 180.80)
 
     enriched = []
     for s in static_subnets:
         sid = s["id"]
-        if live and sid in live:
-            ls = live[sid]
-            merged = {
-                **s,
-                "n": ls["n"] if ls["n"] != f"Subnet {sid}" else s["n"],
-                "mc": ls["mc"] if ls["mc"] > 0 else s["mc"],
-                "em": ls["em"] if ls["em"] > 0 else s["em"],
-                "share": ls["share"] if ls["share"] > 0 else s["share"],
-                "validators": ls["validators"] if ls["validators"] > 0 else s["validators"],
-                "miners": ls["miners"] if ls["miners"] > 0 else s["miners"],
-                "alpha": ls["alpha"] if ls["alpha"] > 0 else s["alpha"],
+        cg_data = cg.get(sid, {})
+        ts_data = ts.get(sid, {}) if ts else {}
+
+        # Build merged record — CoinGecko wins for prices/market_cap, TaoStats for emissions
+        merged = dict(s)  # start from static baseline
+        merged["tao"] = tao_price
+        merged["authenticated"] = is_authenticated
+
+        # ── CoinGecko live fields (name, market cap in USD, alpha price)
+        if cg_data:
+            merged["live"] = True
+            # Convert USD price to TAO for alpha field
+            alpha_usd = cg_data.get("price_usd", 0)
+            merged["alpha"] = round(alpha_usd / tao_price, 6) if tao_price > 0 and alpha_usd > 0 else s.get("alpha", 0)
+            merged["alpha_usd"] = alpha_usd
+            merged["mc"] = cg_data["mc"]                          # real USD market cap
+            merged["price_change_24h"] = cg_data["price_change_24h"]
+            merged["price_change_7d"] = cg_data["price_change_7d"]
+            merged["volume_24h_usd"] = cg_data["volume_24h"]
+            merged["cg_image"] = cg_data["image"]
+            # Only override name if CoinGecko gives a proper one
+            cg_name = cg_data.get("n", "")
+            if cg_name and not cg_name.startswith("Subnet "):
+                merged["n"] = cg_name
+        else:
+            merged["live"] = bool(ts_data)
+
+        # ── TaoStats live fields (emissions, validators, miners — network data)
+        if ts_data:
+            if ts_data.get("em", 0) > 0:
+                merged["em"] = ts_data["em"]
+                merged["emission"] = ts_data["em"]
+            if ts_data.get("share", 0) > 0:
+                merged["share"] = ts_data["share"]
+            if ts_data.get("validators", 0) > 0:
+                merged["validators"] = ts_data["validators"]
+            if ts_data.get("miners", 0) > 0:
+                merged["miners"] = ts_data["miners"]
+            # If TaoStats has alpha price in TAO and no CoinGecko data
+            if not cg_data and ts_data.get("alpha_tao", 0) > 0:
+                merged["alpha"] = ts_data["alpha_tao"]
+
+        enriched.append(merged)
+
+    # Also include subnets discovered by CoinGecko that aren't in our static list
+    static_ids = {s["id"] for s in static_subnets}
+    for netuid, cg_data in cg.items():
+        if netuid not in static_ids and netuid != 0:  # skip TAO (netuid 0)
+            alpha_usd = cg_data.get("price_usd", 0)
+            enriched.append({
+                "id": netuid,
+                "n": cg_data.get("n", f"Subnet {netuid}"),
+                "cat": "Ecosystem",
+                "mc": cg_data["mc"],
+                "alpha": round(alpha_usd / tao_price, 6) if tao_price > 0 and alpha_usd > 0 else 0,
+                "alpha_usd": alpha_usd,
+                "price_change_24h": cg_data["price_change_24h"],
+                "price_change_7d": cg_data["price_change_7d"],
+                "volume_24h_usd": cg_data["volume_24h"],
+                "cg_image": cg_data["image"],
                 "tao": tao_price,
                 "live": True,
                 "authenticated": is_authenticated,
-            }
-        else:
-            merged = {**s, "tao": tao_price, "live": False, "authenticated": is_authenticated}
-        enriched.append(merged)
+                # Defaults for fields not in CoinGecko
+                "em": 0, "share": 0, "validators": 0, "miners": 0,
+                "pe": 0, "score": 0, "trend": "stable",
+            })
 
+    # Sort by market cap descending
+    enriched.sort(key=lambda x: x.get("mc", 0), reverse=True)
     return enriched
 
 @app.get("/api/news")

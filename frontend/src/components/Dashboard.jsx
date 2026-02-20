@@ -153,7 +153,10 @@ const Dashboard = () => {
     }, [stats, subnets]);
 
     // ── Derived metrics ─────────────────────────────────────────────────────────
-    const totalMC = subnets.reduce((s, x) => s + (x.mc || 0), 0);
+    // Use backend-computed totals if available, otherwise compute from subnets
+    const totalMC = stats?.total_ecosystem_mc
+        ?? (subnets.reduce((s, x) => s + (x.mc || 0), 0) || (stats?.market_cap ? stats.market_cap / 1e6 : 0));
+    const activeSubnetCount = stats?.active_subnets ?? subnets.length;
     const avgPE = subnets.length > 0
         ? (subnets.reduce((s, x) => s + ((x.tao || stats?.tao_price || 180) * (x.em || 0)) / Math.max(x.mc || 1, 0.01), 0) / subnets.length)
         : null;
@@ -270,7 +273,7 @@ const Dashboard = () => {
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                                     <div>
-                                        <div className="metric-v">${totalMC > 0 ? totalMC.toFixed(1) : (stats?.market_cap ? (stats.market_cap / 1e6).toFixed(0) : '—')}M</div>
+                                        <div className="metric-v">${totalMC > 0 ? totalMC.toFixed(1) : '—'}M</div>
                                         <div className="metric-ch up">+{(stats?.tao_price_change_24h ?? 0).toFixed(1)}% (24h)</div>
                                     </div>
                                     <Sparkline points={mcSparkPts} color="auto" width={72} height={36} />
@@ -286,11 +289,11 @@ const Dashboard = () => {
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                                     <div>
-                                        <div className="metric-v">{subnets.length}</div>
+                                        <div className="metric-v">{activeSubnetCount}</div>
                                         <div className="metric-ch" style={{ color: 'var(--mute)' }}>
                                             {subnets.filter(s => s.live).length > 0
                                                 ? `${subnets.filter(s => s.live).length} live · ${subnets.filter(s => !s.live).length} static`
-                                                : 'from static data'}
+                                                : 'from CoinGecko'}
                                         </div>
                                     </div>
                                     <Sparkline points={activityPts} color="var(--cyan)" width={72} height={36} />
