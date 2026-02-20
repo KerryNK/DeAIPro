@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
-    LineElement, BarElement, Title, Tooltip, Legend, ArcElement
+    LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import { auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { Skeleton, SkeletonMetric, Sparkline, LiveBadge } from './Skeleton';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler);
+
 
 // ── Fallback historical data generator ──────────────────────────────────────
 function generateFallbackData(days, base = 0.0028, spread = 0.0001) {
@@ -651,13 +652,16 @@ const Dashboard = () => {
                                 <th style={{ width: 32 }}>#</th>
                                 <th style={{ width: 40 }}>UID</th>
                                 <th>Subnet</th>
+                                <th>Owner</th>
                                 <th className="sortable" onClick={() => handleSubnetSort('mc')}>Mkt Cap {sortArrow('mc')}</th>
                                 <th className="sortable" onClick={() => handleSubnetSort('share')}>Emis % {sortArrow('share')}</th>
                                 <th className="sortable" onClick={() => handleSubnetSort('alpha')}>Alpha (τ) {sortArrow('alpha')}</th>
                                 <th className="sortable" onClick={() => handleSubnetSort('pe')}>P/E {sortArrow('pe')}</th>
                                 <th className="sortable" onClick={() => handleSubnetSort('price_change_24h')}>24h {sortArrow('price_change_24h')}</th>
+                                <th className="sortable" onClick={() => handleSubnetSort('price_change_7d')}>7d {sortArrow('price_change_7d')}</th>
                                 <th>Val.</th>
                                 <th>Min.</th>
+                                <th>Tempo</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -666,10 +670,10 @@ const Dashboard = () => {
                                 : displayedSubnets.length === 0
                                     ? (
                                         <tr>
-                                            <td colSpan={10} style={{ textAlign: 'center', padding: '40px', color: 'var(--mute)' }}>
+                                            <td colSpan={13} style={{ textAlign: 'center', padding: '40px', color: 'var(--mute)' }}>
                                                 <div style={{ fontSize: '28px', marginBottom: '8px' }}>📡</div>
-                                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>No subnet data available</div>
-                                                <div style={{ fontSize: '12px' }}>Check your API connection or add a TaoStats API key</div>
+                                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Loading subnets...</div>
+                                                <div style={{ fontSize: '12px' }}>Check your API connection or add a CoinGecko API key</div>
                                             </td>
                                         </tr>
                                     )
@@ -692,6 +696,9 @@ const Dashboard = () => {
                                                         </div>
                                                     </div>
                                                 </td>
+                                                <td style={{ color: 'var(--mute)', fontSize: '11px', fontFamily: "'JetBrains Mono', monospace" }}>
+                                                    {sub.owner ? `${sub.owner.slice(0, 4)}...${sub.owner.slice(-4)}` : '5C4hr...'}
+                                                </td>
                                                 <td className="val">${sub.mc > 0 ? sub.mc.toFixed(2) : '—'}M</td>
                                                 <td className="val" style={{ color: 'var(--cyan)' }}>
                                                     {sub.share > 0 ? `${sub.share.toFixed(2)}%` : <span style={{ color: 'var(--mute)' }}>—</span>}
@@ -703,8 +710,10 @@ const Dashboard = () => {
                                                     {pe !== null && isFinite(pe) ? `${pe.toFixed(1)}x` : <span style={{ color: 'var(--mute)' }}>—</span>}
                                                 </td>
                                                 <td><ChangeBadge value={sub.price_change_24h} /></td>
+                                                <td><ChangeBadge value={sub.price_change_7d} /></td>
                                                 <td style={{ color: 'var(--mute)', fontSize: '12px' }}>{sub.validators > 0 ? sub.validators : '—'}</td>
                                                 <td style={{ color: 'var(--mute)', fontSize: '12px' }}>{sub.miners > 0 ? sub.miners : '—'}</td>
+                                                <td style={{ color: 'var(--mute)', fontSize: '11px' }}>{sub.tempo || 360} blk</td>
                                             </tr>
                                         );
                                     })
