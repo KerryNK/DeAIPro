@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import LoginModal from './components/LoginModal'
@@ -28,17 +28,6 @@ function AppContent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { isLoginOpen, openLoginModal, closeLoginModal } = useAuth()
 
-  // ── Dark mode — persisted to localStorage, defaults to dark ───────────────
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('deai_dark_mode')
-    return saved !== null ? saved === 'true' : true
-  })
-
-  useEffect(() => {
-    document.body.classList.toggle('light', !darkMode)
-    localStorage.setItem('deai_dark_mode', darkMode)
-  }, [darkMode])
-
   const renderView = () => {
     switch (activeView) {
       case 'overview': return <Dashboard />
@@ -65,8 +54,6 @@ function AppContent() {
           }}
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
-          darkMode={darkMode}
-          onToggleDark={() => setDarkMode(d => !d)}
         />
         <div
           className={`overlay ${isMobileMenuOpen ? 'open' : ''}`}

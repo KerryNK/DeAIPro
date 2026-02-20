@@ -14,12 +14,10 @@ import {
     Twitter,
     Linkedin,
     ShieldCheck,
-    Sun,
-    Moon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const Sidebar = ({ activeView, setActiveView, isOpen, onClose, darkMode, onToggleDark }) => {
+const Sidebar = ({ activeView, setActiveView, isOpen, onClose }) => {
     const { isAdmin } = useAuth();
 
     const navItems = [
@@ -111,27 +109,6 @@ const Sidebar = ({ activeView, setActiveView, isOpen, onClose, darkMode, onToggl
                     </div>
                 </div>
             )}
-
-            {/* ── Dark / Light mode toggle ─────────────────────────────── */}
-            <div style={{ padding: '12px 12px 0' }}>
-                <button
-                    onClick={onToggleDark}
-                    title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                    style={{
-                        width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                        padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--bdr)',
-                        background: 'var(--bg3)', color: 'var(--txt2)', cursor: 'pointer',
-                        fontSize: '13px', transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg4)'; e.currentTarget.style.color = 'var(--txt)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.style.color = 'var(--txt2)'; }}
-                >
-                    <span style={{ display: 'flex', alignItems: 'center', color: darkMode ? 'var(--amber)' : 'var(--cyan)' }}>
-                        {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-                    </span>
-                    {darkMode ? 'Light Mode' : 'Dark Mode'}
-                </button>
-            </div>
 
             <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--bdr)' }}>
                 <div className="nav-hd">Socials</div>
