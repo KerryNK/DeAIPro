@@ -288,6 +288,22 @@ async def get_subnets(request: Request):
     if isinstance(ts, Exception): ts = None
     tao_price = tao_data.get("tao_price", 180.80)
 
+    # Fallback: if TaoStats is completely missing (no API key) but we have CoinGecko data,
+    # approximate daily emissions (7200 TAO total per day) proportionally by Alpha Market Cap.
+    if not ts and cg:
+        ts = {}
+        total_cg_mc = sum(v.get("mc", 0) for v in cg.values())
+        if total_cg_mc > 0:
+            for netuid, cgd in cg.items():
+                mc = cgd.get("mc", 0)
+                share_frac = mc / total_cg_mc
+                ts[netuid] = {
+                    "em": round(7200 * share_frac, 2),
+                    "share": round(share_frac * 100, 2),
+                    "validators": 0,  # missing without real TaoStats
+                    "miners": 0,      # missing without real TaoStats
+                }
+
     enriched = []
     for s in static_subnets:
         sid = s["id"]
