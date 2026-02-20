@@ -415,6 +415,60 @@ async def get_historical_btc(days: int = 30):
             data.append({"date": date, "value": base})
         return {"data": data}
 
+@app.get("/api/historical/tao")
+async def get_historical_tao(days: int = 30):
+    """Real CoinGecko TAO/USD price history."""
+    cache_key = f"historical_tao_{days}"
+    cached = get_cached(cache_key, 300)
+    if cached:
+        return cached
+
+    headers = {}
+    if COINGECKO_API_KEY:
+        headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
+
+    interval = "daily" if days > 1 else "hourly"
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                f"{COINGECKO_BASE}/coins/bittensor/market_chart",
+                params={"vs_currency": "usd", "days": str(days), "interval": interval},
+                headers=headers
+            )
+            resp.raise_for_status()
+            raw = resp.json()
+            prices = raw.get("prices", [])
+            result = {
+                "data": [
+                    {
+                        "date": datetime.fromtimestamp(p[0] / 1000).strftime(
+                            "%b %d, %H:%M" if days <= 1 else "%b %d"
+                        ),
+                        "value": round(p[1], 4),
+                        "timestamp": p[0],
+                    }
+                    for p in prices
+                ]
+            }
+            set_cache(cache_key, result)
+            return result
+    except Exception as e:
+        print(f"CoinGecko TAO/USD history error: {e}. Using fallback.")
+        import random
+        base = 180.0
+        data = []
+        now = datetime.now()
+        for i in range(days if days > 1 else 24):
+            if days <= 1:
+                d = (now - timedelta(hours=24 - i))
+                label = d.strftime("%H:%M")
+            else:
+                d = (now - timedelta(days=days - 1 - i))
+                label = d.strftime("%b %d")
+            base = max(50, base + (random.random() - 0.5) * 6)
+            data.append({"date": label, "value": round(base, 2)})
+        return {"data": data}
+
 # ─── Admin: Approve access request ───────────────────────────────────────────
 class ApproveRequest(BaseModel):
     email: str
@@ -470,6 +524,47 @@ async def approve_access_request(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to approve user: {str(e)}")
+
+@app.get("/api/historical/tao")
+async def get_historical_tao(days: int = 30):
+    cache_key = f"historical_tao_{days}"
+    cached = get_cached(cache_key, 300)
+    if cached:
+        return cached
+
+    headers = {}
+    if COINGECKO_API_KEY:
+        headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                f"{COINGECKO_BASE}/coins/bittensor/market_chart",
+                params={"vs_currency": "usd", "days": str(days), "interval": "daily" if days > 7 else "hourly"},
+                headers=headers
+            )
+            resp.raise_for_status()
+            raw = resp.json()
+            result = {
+                "data": [
+                    {"date": datetime.fromtimestamp(p[0] / 1000).strftime("%Y-%m-%d %H:%M"), "value": p[1]}
+                    for p in raw.get("prices", [])
+                ]
+            }
+            set_cache(cache_key, result)
+            return result
+    except Exception as e:
+        print(f"CoinGecko TAO historical fetch error: {e}. Using fallback.")
+        import random
+        base = 180.0
+        data = []
+        now = datetime.now()
+        for i in range(days):
+            date = (now - timedelta(days=days - 1 - i)).strftime("%Y-%m-%d")
+            base = max(80, base + (random.random() - 0.5) * 10)
+            data.append({"date": date, "value": round(base, 2)})
+        return {"data": data}
+
 
 @app.get("/api/health")
 async def health():

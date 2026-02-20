@@ -2008,6 +2008,27 @@ body,
     }
 }
 
+@media (max-width: 768px) {
+    .grid-2 {
+        grid-template-columns: 1fr
+    }
+
+    .price-stats {
+        flex-direction: column;
+        gap: 10px
+    }
+
+    .price-v {
+        font-size: 26px
+    }
+
+    .sec-hd {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px
+    }
+}
+
 @media (max-width: 480px) {
     .metric-g {
         grid-template-columns: 1fr
@@ -2022,6 +2043,14 @@ body,
     }
 
     .chart-box {
-        height: 180px !important
+        height: 200px !important
+    }
+
+    .price-v {
+        font-size: 22px
+    }
+
+    .metric-v {
+        font-size: 20px
     }
 }
