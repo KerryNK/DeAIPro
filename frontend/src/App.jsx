@@ -8,6 +8,7 @@ import Research from './components/Research'
 import ReportGenerator from './components/ReportGenerator'
 import News from './components/News'
 import Reports from './components/Reports'
+import AdminPanel from './components/AdminPanel'
 import LoginModal from './components/LoginModal'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
@@ -25,6 +26,7 @@ function AppContent() {
       case 'academy': return <ReportGenerator />
       case 'intelligence': return <News />
       case 'reports': return <Reports />
+      case 'admin': return <AdminPanel />
       default: return <Dashboard />
     }
   }

@@ -5,17 +5,21 @@ import {
     Calculator,
     FileText,
     Sparkles,
-    GraduationCap,
     Newspaper,
     Lock,
     Github,
     Globe,
     Users,
     FileBarChart2,
-    Twitter
+    Twitter,
+    Linkedin,
+    ShieldCheck
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ activeView, setActiveView, isOpen, onClose }) => {
+    const { isAdmin } = useAuth();
+
     const navItems = [
         { id: 'overview', icon: <BarChart2 size={18} />, label: 'Overview' },
         { id: 'subnet', icon: <Search size={18} />, label: 'Subnet Explorer' },
@@ -30,27 +34,17 @@ const Sidebar = ({ activeView, setActiveView, isOpen, onClose }) => {
     ];
 
     const socials = [
-        {
-            href: 'https://x.com/DeAIStrategies',
-            icon: <Twitter size={18} />,
-            label: 'X (Twitter)'
-        },
-        {
-            href: 'https://deaistrategies.io',
-            icon: <Globe size={18} />,
-            label: 'Website'
-        },
-        {
-            href: 'https://github.com/DeAI-Labs',
-            icon: <Github size={18} />,
-            label: 'GitHub'
-        },
-        {
-            href: 'https://deaistrategies.io/team',
-            icon: <Users size={18} />,
-            label: 'Team'
-        },
+        { href: 'https://x.com/DeAIStrategies', icon: <Twitter size={18} />, label: 'X (Twitter)' },
+        { href: 'https://linkedin.com/company/deaistrategies', icon: <Linkedin size={18} />, label: 'LinkedIn' },
+        { href: 'https://deaistrategies.io', icon: <Globe size={18} />, label: 'Website' },
+        { href: 'https://github.com/DeAI-Labs', icon: <Github size={18} />, label: 'GitHub' },
+        { href: 'https://deaistrategies.io/team', icon: <Users size={18} />, label: 'Team' },
     ];
+
+    const navClick = (id) => {
+        setActiveView(id);
+        if (window.innerWidth < 768) onClose();
+    };
 
     return (
         <aside className={`side ${isOpen ? 'open' : ''}`}>
@@ -68,10 +62,7 @@ const Sidebar = ({ activeView, setActiveView, isOpen, onClose }) => {
                     <div
                         key={item.id}
                         className={`nav-i ${activeView === item.id ? 'act' : ''}`}
-                        onClick={() => {
-                            setActiveView(item.id);
-                            if (window.innerWidth < 768) onClose();
-                        }}
+                        onClick={() => navClick(item.id)}
                     >
                         <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.icon}</span>
                         {item.label}
@@ -85,10 +76,7 @@ const Sidebar = ({ activeView, setActiveView, isOpen, onClose }) => {
                     <div
                         key={item.id}
                         className={`nav-i ${activeView === item.id ? 'act' : ''}`}
-                        onClick={() => {
-                            setActiveView(item.id);
-                            if (window.innerWidth < 768) onClose();
-                        }}
+                        onClick={() => navClick(item.id)}
                     >
                         <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.icon}</span>
                         {item.label}
@@ -103,6 +91,23 @@ const Sidebar = ({ activeView, setActiveView, isOpen, onClose }) => {
                     Pro Analytics
                 </div>
             </div>
+
+            {/* Admin panel — only for @deaistrategies.io users */}
+            {isAdmin && (
+                <div className="nav-s">
+                    <div className="nav-hd" style={{ color: 'var(--amber)' }}>Admin</div>
+                    <div
+                        className={`nav-i ${activeView === 'admin' ? 'act' : ''}`}
+                        onClick={() => navClick('admin')}
+                        style={{ color: activeView === 'admin' ? undefined : 'var(--amber)' }}
+                    >
+                        <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ShieldCheck size={18} />
+                        </span>
+                        Access Requests
+                    </div>
+                </div>
+            )}
 
             <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--bdr)' }}>
                 <div className="nav-hd">Socials</div>

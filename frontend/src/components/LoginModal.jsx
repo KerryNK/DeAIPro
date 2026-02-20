@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import {
     GoogleAuthProvider,
     signInWithPopup,
     signInWithEmailAndPassword,
     sendPasswordResetEmail
 } from 'firebase/auth';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 
 const LoginModal = ({ isOpen, onClose }) => {
     const [tab, setTab] = useState('signin'); // 'signin' | 'request'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [role, setRole] = useState('');
     const [resetEmail, setResetEmail] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -44,7 +46,7 @@ const LoginModal = ({ isOpen, onClose }) => {
             if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
                 setError('Incorrect email or password.');
             } else if (err.code === 'auth/user-not-found') {
-                setError('No account found with this email.');
+                setError('No account found with this email. Request access below.');
             } else if (err.code === 'auth/too-many-requests') {
                 setError('Too many attempts. Please reset your password or try later.');
             } else {
@@ -62,7 +64,7 @@ const LoginModal = ({ isOpen, onClose }) => {
         setLoading(true);
         try {
             await sendPasswordResetEmail(auth, resetEmail);
-            setSuccess('Password reset email sent! Check your inbox. The link expires in 24 hours.');
+            setSuccess('Password reset email sent! The link expires in 24 hours.');
         } catch (err) {
             setError('Could not send reset email. Check the address and try again.');
         } finally {
@@ -70,9 +72,49 @@ const LoginModal = ({ isOpen, onClose }) => {
         }
     };
 
-    const handleRequestAccess = (e) => {
+    const handleRequestAccess = async (e) => {
         e.preventDefault();
-        setSuccess('Access request received! The DeAI Strategies team will reach out to you at ' + email + ' within 24 hours.');
+        setError('');
+        setSuccess('');
+        setLoading(true);
+
+        try {
+            // Check for an existing pending/approved request
+            const q = query(
+                collection(db, 'accessRequests'),
+                where('email', '==', email.toLowerCase())
+            );
+            const existing = await getDocs(q);
+            if (!existing.empty) {
+                const doc = existing.docs[0].data();
+                if (doc.status === 'approved') {
+                    setError('Your request has already been approved. Check your email for your login link.');
+                } else if (doc.status === 'pending') {
+                    setSuccess('Your request is already pending review. We\'ll email you when approved.');
+                } else {
+                    setError('Your previous request was not approved. Contact the DeAI Strategies team directly.');
+                }
+                setLoading(false);
+                return;
+            }
+
+            // Write new access request to Firestore
+            await addDoc(collection(db, 'accessRequests'), {
+                email: email.toLowerCase(),
+                role: role || 'Not specified',
+                status: 'pending',
+                requestedAt: serverTimestamp(),
+            });
+
+            setSuccess(`Access request submitted for ${email}. If approved, you'll receive a login link by email valid for 24 hours.`);
+            setEmail('');
+            setRole('');
+        } catch (err) {
+            console.error('Request access error:', err);
+            setError('Failed to submit request. Please try again or contact support.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const resetForm = () => {
@@ -81,6 +123,7 @@ const LoginModal = ({ isOpen, onClose }) => {
         setShowReset(false);
         setEmail('');
         setPassword('');
+        setRole('');
         setResetEmail('');
     };
 
@@ -99,21 +142,14 @@ const LoginModal = ({ isOpen, onClose }) => {
                 </div>
 
                 {!showReset && (
-                    /* Tab switcher */
                     <div style={{ display: 'flex', gap: '4px', background: 'var(--bg3)', borderRadius: '8px', padding: '4px', marginBottom: '20px' }}>
                         {['signin', 'request'].map(t => (
                             <button
                                 key={t}
                                 onClick={() => { setTab(t); resetForm(); }}
                                 style={{
-                                    flex: 1,
-                                    padding: '8px',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    fontSize: '13px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
+                                    flex: 1, padding: '8px', border: 'none', borderRadius: '6px',
+                                    fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
                                     background: tab === t ? 'var(--bg4)' : 'transparent',
                                     color: tab === t ? 'var(--txt)' : 'var(--mute)',
                                     boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,0.3)' : 'none'
@@ -125,7 +161,6 @@ const LoginModal = ({ isOpen, onClose }) => {
                     </div>
                 )}
 
-                {/* Messages */}
                 {error && (
                     <div style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', color: 'var(--rose)', fontSize: '12px', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px' }}>
                         {error}
@@ -141,15 +176,15 @@ const LoginModal = ({ isOpen, onClose }) => {
                 {showReset && (
                     <>
                         <p style={{ fontSize: '13px', color: 'var(--txt2)', marginBottom: '20px', lineHeight: 1.6 }}>
-                            Enter your email address and we'll send you a password reset link. The link expires after <strong style={{ color: 'var(--cyan)' }}>24 hours</strong>.
+                            Enter your email and we'll send a password reset link. The link expires after{' '}
+                            <strong style={{ color: 'var(--cyan)' }}>24 hours</strong>.
                         </p>
                         <form onSubmit={handlePasswordReset}>
                             <div className="form-row">
                                 <label className="form-l">Email Address</label>
                                 <input
-                                    type="email"
-                                    className="form-in"
-                                    placeholder="your@deaistrategies.io"
+                                    type="email" className="form-in"
+                                    placeholder="your@email.com"
                                     value={resetEmail}
                                     onChange={(e) => setResetEmail(e.target.value)}
                                     required
@@ -165,7 +200,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                     </>
                 )}
 
-                {/* Sign In View */}
+                {/* Sign In */}
                 {!showReset && tab === 'signin' && (
                     <>
                         <button
@@ -188,9 +223,8 @@ const LoginModal = ({ isOpen, onClose }) => {
                             <div className="form-row">
                                 <label className="form-l">Email Address</label>
                                 <input
-                                    type="email"
-                                    className="form-in"
-                                    placeholder="your@deaistrategies.io"
+                                    type="email" className="form-in"
+                                    placeholder="your@email.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
@@ -199,8 +233,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                             <div className="form-row">
                                 <label className="form-l">Password</label>
                                 <input
-                                    type="password"
-                                    className="form-in"
+                                    type="password" className="form-in"
                                     placeholder="Enter your password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -223,42 +256,56 @@ const LoginModal = ({ isOpen, onClose }) => {
                                 </button>
                             </div>
                         </form>
+
+                        <p style={{ fontSize: '11px', color: 'var(--mute)', textAlign: 'center', marginTop: '16px' }}>
+                            Don't have access?{' '}
+                            <button onClick={() => { setTab('request'); resetForm(); }} style={{ background: 'none', border: 'none', color: 'var(--cyan)', fontSize: '11px', cursor: 'pointer', padding: 0 }}>
+                                Request it here
+                            </button>
+                        </p>
                     </>
                 )}
 
-                {/* Request Access View */}
+                {/* Request Access */}
                 {!showReset && tab === 'request' && (
                     <>
                         <p style={{ fontSize: '13px', color: 'var(--txt2)', marginBottom: '20px', lineHeight: 1.6 }}>
-                            Request access to DeAI Nexus Pro. Our team will review your request and send you login credentials within 24 hours.
+                            Submit a request for access. A <strong style={{ color: 'var(--cyan)' }}>@deaistrategies.io</strong> admin will review and, if approved, you'll receive a login link by email valid for <strong style={{ color: 'var(--cyan)' }}>24 hours</strong>.
                         </p>
                         <form onSubmit={handleRequestAccess}>
                             <div className="form-row">
                                 <label className="form-l">Your Email Address</label>
                                 <input
-                                    type="email"
-                                    className="form-in"
+                                    type="email" className="form-in"
                                     placeholder="you@company.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
+                                    disabled={!!success}
                                 />
                             </div>
                             <div className="form-row">
                                 <label className="form-l">Organisation / Role (optional)</label>
                                 <input
-                                    type="text"
-                                    className="form-in"
+                                    type="text" className="form-in"
                                     placeholder="e.g. Validator, Investor, Researcher"
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                    disabled={!!success}
                                 />
                             </div>
                             <div className="form-act">
                                 <button type="button" className="btn btn-g" onClick={onClose}>Cancel</button>
-                                <button type="submit" className="btn btn-p">Request Access</button>
+                                <button type="submit" className="btn btn-p" disabled={loading || !!success}>
+                                    {loading ? 'Submitting...' : 'Request Access'}
+                                </button>
                             </div>
                         </form>
                         <p style={{ fontSize: '11px', color: 'var(--mute)', textAlign: 'center', marginTop: '16px' }}>
-                            Already have an account? <button onClick={() => { setTab('signin'); resetForm(); }} style={{ background: 'none', border: 'none', color: 'var(--cyan)', fontSize: '11px', cursor: 'pointer', padding: 0 }}>Sign in</button>
+                            Already have an account?{' '}
+                            <button onClick={() => { setTab('signin'); resetForm(); }} style={{ background: 'none', border: 'none', color: 'var(--cyan)', fontSize: '11px', cursor: 'pointer', padding: 0 }}>
+                                Sign in
+                            </button>
                         </p>
                     </>
                 )}
