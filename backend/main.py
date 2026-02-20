@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -53,6 +53,17 @@ async def require_admin(user: dict = Depends(get_current_user)):
     if not email.lower().endswith("@deaistrategies.io"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required.")
     return user
+
+async def get_optional_user(request: Request):
+    """Returns the Firebase user dict if a valid Bearer token is present, else None."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.split(" ", 1)[1]
+    try:
+        return auth.verify_id_token(token)
+    except Exception:
+        return None
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
 app.add_middleware(
@@ -177,7 +188,13 @@ async def get_stats():
     }
 
 @app.get("/api/subnets")
-async def get_subnets(user: dict = Depends(get_current_user)):
+async def get_subnets(request: Request):
+    """Returns subnet data. All users get the public fields needed for the dashboard.
+    Authenticated @deaistrategies.io users also get the `restricted` flag set to False
+    so the frontend can show detailed expanded rows."""
+    user = await get_optional_user(request)
+    is_authenticated = user is not None
+
     tao_data = await fetch_tao_data()
     tao_price = tao_data["tao_price"]
 
@@ -200,9 +217,10 @@ async def get_subnets(user: dict = Depends(get_current_user)):
                 "alpha": ls["alpha"] if ls["alpha"] > 0 else s["alpha"],
                 "tao": tao_price,
                 "live": True,
+                "authenticated": is_authenticated,
             }
         else:
-            merged = {**s, "tao": tao_price, "live": False}
+            merged = {**s, "tao": tao_price, "live": False, "authenticated": is_authenticated}
         enriched.append(merged)
 
     return enriched

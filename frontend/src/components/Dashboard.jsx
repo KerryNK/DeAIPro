@@ -4,7 +4,7 @@ import {
     LineElement, BarElement, Title, Tooltip, Legend, ArcElement
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
-import { fetchWithAuth } from '../utils/api';
+import { auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { Skeleton, SkeletonMetric, Sparkline, LiveBadge } from './Skeleton';
 
@@ -40,7 +40,7 @@ const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [subnets, setSubnets] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [dataStatus, setDataStatus] = useState('loading'); // 'loading' | 'live' | 'delayed'
+    const [dataStatus, setDataStatus] = useState('loading');
     const [lastUpdated, setLastUpdated] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const [btcTimeRange, setBtcTimeRange] = useState(30);
@@ -50,27 +50,54 @@ const Dashboard = () => {
     const [perfStats, setPerfStats] = useState({ taoChange: 0, alphaChange: 0 });
     const refreshIconRef = useRef(null);
 
-    const fetchData = useCallback(async () => {
-        if (authLoading) return;
+    const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+    // ── Stats: plain public fetch, fires immediately ──────────────────────────
+    const fetchStats = useCallback(async () => {
         try {
-            const [statsData, subnetsData] = await Promise.all([
-                fetchWithAuth('/api/stats'),
-                fetchWithAuth('/api/subnets'),
-            ]);
-            setStats(statsData);
-            setSubnets(Array.isArray(subnetsData) ? subnetsData : []);
-            setDataStatus('live');
+            const resp = await fetch(`${BASE_URL}/api/stats`);
+            if (!resp.ok) throw new Error(`${resp.status}`);
+            const data = await resp.json();
+            setStats(data);
             setLastUpdated(Date.now());
+            setDataStatus(prev => prev === 'loading' ? 'live' : 'live');
         } catch (err) {
-            console.error('Failed to fetch dashboard data', err);
+            console.error('Stats fetch failed', err);
             setDataStatus('delayed');
+        }
+    }, []);
+
+    // ── Subnets: public endpoint — no auth required, token added if available ─
+    const fetchSubnets = useCallback(async () => {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            // Attach token if user is signed in, but don't wait for it
+            if (user) {
+                try {
+                    const token = await auth.currentUser?.getIdToken();
+                    if (token) headers['Authorization'] = `Bearer ${token}`;
+                } catch (_) { }
+            }
+            const resp = await fetch(`${BASE_URL}/api/subnets`, { headers });
+            if (!resp.ok) throw new Error(`${resp.status}`);
+            const data = await resp.json();
+            setSubnets(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Subnets fetch failed', err);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [authLoading, user]);
+    }, [user]);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    const fetchData = useCallback(async () => {
+        await Promise.all([fetchStats(), fetchSubnets()]);
+    }, [fetchStats, fetchSubnets]);
+
+    // Fire immediately on mount — no auth wait
+    useEffect(() => { fetchStats(); }, [fetchStats]);
+    useEffect(() => { fetchSubnets(); }, [fetchSubnets]);
+
 
     const handleRefresh = () => {
         setRefreshing(true);

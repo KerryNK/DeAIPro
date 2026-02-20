@@ -1,5 +1,5 @@
 import React from 'react';
-import { fetchWithAuth } from '../utils/api';
+import { auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 
@@ -14,33 +14,56 @@ const Header = ({ onLogin, onToggleMenu }) => {
     const [secAgo, setSecAgo] = useState(0);
     const timerRef = useRef(null);
 
+    const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+    // ── Fetch public /api/stats immediately — no auth needed ─────────────────
     useEffect(() => {
-        if (authLoading) return;
-        const fetchData = async () => {
+        const fetchStats = async () => {
             try {
-                const [statsData, subnetsData] = await Promise.all([
-                    fetchWithAuth('/api/stats'),
-                    fetchWithAuth('/api/subnets'),
-                ]);
+                const resp = await fetch(`${BASE_URL}/api/stats`);
+                if (!resp.ok) throw new Error(`${resp.status}`);
+                const statsData = await resp.json();
                 setTaoPrice(statsData?.tao_price ?? null);
                 setTaoChange(statsData?.tao_price_change_24h ?? null);
                 setNetCap(statsData?.market_cap ?? null);
+                setLastUpdated(Date.now());
+                setSecAgo(0);
+                setDataStatus(prev => prev === 'loading' ? 'live' : prev);
+            } catch (err) {
+                console.error('Header stats fetch failed', err);
+                setDataStatus('delayed');
+            }
+        };
+        fetchStats();
+        const interval = setInterval(fetchStats, 60000);
+        return () => clearInterval(interval);
+    }, []); // runs once on mount, then every 60s
+
+    // ── Fetch /api/subnets for ticker (after auth settles) ──────────────────
+    useEffect(() => {
+        if (authLoading) return;
+        const fetchTicker = async () => {
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (user) {
+                    const token = await auth.currentUser?.getIdToken();
+                    if (token) headers['Authorization'] = `Bearer ${token}`;
+                }
+                const resp = await fetch(`${BASE_URL}/api/subnets`, { headers });
+                if (!resp.ok) throw new Error(`${resp.status}`);
+                const subnetsData = await resp.json();
                 const items = (Array.isArray(subnetsData) ? subnetsData : []).slice(0, 20).map(s => ({
                     id: s.id, n: s.n, momentum: s.momentum || (Math.random() * 20 - 10)
                 }));
                 setTickerItems([...items, ...items]);
                 setDataStatus('live');
-                setLastUpdated(Date.now());
-                setSecAgo(0);
             } catch (err) {
-                console.error('Header fetch failed', err);
-                setDataStatus('delayed');
+                console.error('Header ticker fetch failed', err);
             }
         };
-        fetchData();
-        const interval = setInterval(fetchData, 60000);
-        return () => clearInterval(interval);
+        fetchTicker();
     }, [authLoading, user]);
+
 
     // Live "X sec ago" counter
     useEffect(() => {
