@@ -3,3 +3,5 @@ uvicorn
 pydantic
 gunicorn
 firebase-admin
+httpx
+python-dotenv
