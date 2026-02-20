@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
+
 const ValuationTools = () => {
-    const { isRestricted } = useAuth();
+    const { isRestricted, openLoginModal } = useAuth();
 
     // Calculator States
     const [opex, setOpex] = useState(9125000);
@@ -450,7 +451,7 @@ const ValuationTools = () => {
                         <div className="restriction-icon">🔒</div>
                         <h3>Pro Access Required</h3>
                         <p>Valuation tools are available exclusively to <b>DeAI Strategies</b> team members and Pro subscribers.</p>
-                        <button className="btn btn-p" onClick={() => document.querySelector('.btn-p[onclick*="openModal"]')?.click()}>Sign in to unlock</button>
+                        <button className="btn btn-p" onClick={openLoginModal}>Sign in to unlock</button>
                     </div>
                 </div>
             )}

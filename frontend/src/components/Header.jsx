@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { fetchWithAuth } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
 
 const Header = ({ onLogin, onToggleMenu }) => {
+    const { user, logout } = useAuth();
     const [taoPrice, setTaoPrice] = useState('...');
     const [taoChange, setTaoChange] = useState('...');
-
     const [tickerItems, setTickerItems] = useState([]);
 
     useEffect(() => {
@@ -18,26 +20,28 @@ const Header = ({ onLogin, onToggleMenu }) => {
                 setTaoPrice('$' + (statsData?.tao_price?.toFixed(2) || '...'));
                 setTaoChange((statsData?.tao_price_change_24h > 0 ? '+' : '') + (statsData?.tao_price_change_24h || '...') + '%');
 
-                // Prepare ticker data (top 20 by momentum, mock momentum if missing)
-                // The mock data provided to backend might not have momentum, let's check.
-                // If not, we generate it or use a random one like the HTML does?
-                // HTML data has momentum. Backend data.py likely has it.
                 const items = subnetsData.slice(0, 20).map(s => ({
                     id: s.id,
                     n: s.n,
-                    momentum: s.momentum || (Math.random() * 20 - 10) // Fallback if missing
+                    momentum: s.momentum || (Math.random() * 20 - 10)
                 }));
-                // Duplicate for infinite scroll
                 setTickerItems([...items, ...items]);
-
             } catch (err) {
-                console.error("Failed to fetch header data", err);
+                console.error('Failed to fetch header data', err);
             }
         };
 
         fetchData();
-        // Live updates simulation could go here
+        const interval = setInterval(fetchData, 60000);
+        return () => clearInterval(interval);
     }, []);
+
+    // Get user initials for avatar
+    const getUserInitial = () => {
+        if (user?.name) return user.name.charAt(0).toUpperCase();
+        if (user?.email) return user.email.charAt(0).toUpperCase();
+        return '?';
+    };
 
     return (
         <header className="hdr">
@@ -94,9 +98,54 @@ const Header = ({ onLogin, onToggleMenu }) => {
                     <div className="live-d"></div>
                     <span id="liveTs">LIVE</span>
                 </div>
-                <button className="btn btn-p" onClick={onLogin}>
-                    Sign In
-                </button>
+                {user ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {/* User Avatar */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            background: 'var(--bg3)', borderRadius: '20px',
+                            padding: '4px 12px 4px 4px',
+                            border: '1px solid var(--bdr)'
+                        }}>
+                            {user.photo ? (
+                                <img
+                                    src={user.photo}
+                                    alt={user.name}
+                                    style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                                />
+                            ) : (
+                                <div style={{
+                                    width: '28px', height: '28px', borderRadius: '50%',
+                                    background: 'linear-gradient(135deg, var(--violet), var(--cyan))',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '13px', fontWeight: 700, color: '#fff'
+                                }}>
+                                    {getUserInitial()}
+                                </div>
+                            )}
+                            <div>
+                                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt)', lineHeight: 1.2 }}>
+                                    {user.name || user.email?.split('@')[0]}
+                                </div>
+                                <div style={{ fontSize: '10px', color: 'var(--mute)', lineHeight: 1.2 }}>
+                                    {user.email}
+                                </div>
+                            </div>
+                        </div>
+                        {/* Sign Out Button */}
+                        <button
+                            className="btn btn-g"
+                            onClick={logout}
+                            style={{ fontSize: '12px', padding: '6px 14px' }}
+                        >
+                            Sign Out
+                        </button>
+                    </div>
+                ) : (
+                    <button className="btn btn-p" onClick={onLogin}>
+                        Sign In
+                    </button>
+                )}
             </div>
         </header>
     );

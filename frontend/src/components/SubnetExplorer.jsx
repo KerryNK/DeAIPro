@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { fetchWithAuth } from '../utils/api';
 
+
 // Calculations based on HTML logic
 const calcAPY = (s) => {
     const baseAPY = 18;
@@ -32,13 +33,14 @@ const calcSharpe = (s) => {
 };
 
 const SubnetExplorer = () => {
-    const { isRestricted } = useAuth();
+    const { isRestricted, openLoginModal } = useAuth();
     const [subnets, setSubnets] = useState([]);
     const [sortConfig, setSortConfig] = useState({ key: 'score', direction: 'desc' });
     const [loading, setLoading] = useState(true);
     const [isSortOpen, setIsSortOpen] = useState(false);
     const [activeCategory, setActiveCategory] = useState('All');
     const [expandedRows, setExpandedRows] = useState(new Set());
+    const [searchQuery, setSearchQuery] = useState('');
 
     const categories = ['All', 'Inference', 'Training', 'Storage', 'Compute', 'Data', 'Finance', 'Media', 'Social', 'Reasoning'];
 
@@ -78,7 +80,16 @@ const SubnetExplorer = () => {
         setExpandedRows(newExpanded);
     };
 
-    const filteredSubnets = subnets.filter(s => activeCategory === 'All' || s.cat === activeCategory);
+    const searchFiltered = subnets.filter(s => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            String(s.id).includes(q) ||
+            (s.n && s.n.toLowerCase().includes(q)) ||
+            (s.cat && s.cat.toLowerCase().includes(q))
+        );
+    });
+    const filteredSubnets = searchFiltered.filter(s => activeCategory === 'All' || s.cat === activeCategory);
 
     const sortedSubnets = [...filteredSubnets].sort((a, b) => {
         let valA = a[sortConfig.key];
@@ -133,7 +144,36 @@ const SubnetExplorer = () => {
                         <div className="sec-t">Subnet Explorer</div>
                         <div className="sec-sub">Comprehensive subnet analytics and metrics • Click any row to expand</div>
                     </div>
-                    <div className="sec-act">
+                    <div className="sec-act" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        {/* Search Bar */}
+                        <div style={{ position: 'relative' }}>
+                            <svg
+                                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--mute)', pointerEvents: 'none' }}
+                            >
+                                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                            </svg>
+                            <input
+                                type="text"
+                                placeholder="Search subnets..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{
+                                    background: 'var(--bg3)', border: '1px solid var(--bdr)',
+                                    borderRadius: '8px', color: 'var(--txt)', fontSize: '13px',
+                                    padding: '7px 12px 7px 32px', outline: 'none',
+                                    width: '200px', transition: 'border-color 0.2s'
+                                }}
+                                onFocus={e => e.target.style.borderColor = 'var(--cyan)'}
+                                onBlur={e => e.target.style.borderColor = 'var(--bdr)'}
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--mute)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: 0 }}
+                                >×</button>
+                            )}
+                        </div>
                         <div className="srt">
                             <div className="srt-btn" onClick={() => setIsSortOpen(!isSortOpen)}>
                                 Sort by: {sortConfig.key.toUpperCase()}
@@ -299,7 +339,7 @@ const SubnetExplorer = () => {
                                                                 <div className="restriction-icon" style={{ fontSize: '24px', marginBottom: '10px' }}>🔒</div>
                                                                 <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>Pro Access Required</h3>
                                                                 <p style={{ fontSize: '12px', marginBottom: '12px' }}>Detailed subnet metrics are available to Pro subscribers.</p>
-                                                                <button className="btn btn-p" style={{ fontSize: '12px', padding: '6px 16px' }} onClick={() => document.querySelector('.btn-p[onclick*="openModal"]')?.click()}>Unlock</button>
+                                                                <button className="btn btn-p" style={{ fontSize: '12px', padding: '6px 16px' }} onClick={openLoginModal}>Unlock</button>
                                                             </div>
                                                         </div>
                                                     )}

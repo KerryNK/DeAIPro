@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import Dashboard from './components/Dashboard'
@@ -7,13 +7,14 @@ import ValuationTools from './components/ValuationTools'
 import Research from './components/Research'
 import Academy from './components/Academy'
 import News from './components/News'
+import Reports from './components/Reports'
 import LoginModal from './components/LoginModal'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 
 function AppContent() {
   const [activeView, setActiveView] = useState('overview')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isLoginOpen, setIsLoginOpen] = useState(false)
+  const { isLoginOpen, openLoginModal, closeLoginModal } = useAuth()
 
   const renderView = () => {
     switch (activeView) {
@@ -23,13 +24,14 @@ function AppContent() {
       case 'research': return <Research />
       case 'academy': return <Academy />
       case 'intelligence': return <News />
+      case 'reports': return <Reports />
       default: return <Dashboard />
     }
   }
 
   return (
     <>
-      <Header onLogin={() => setIsLoginOpen(true)} onToggleMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+      <Header onLogin={openLoginModal} onToggleMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
       <div className="main">
         <Sidebar
           activeView={activeView}
@@ -45,7 +47,7 @@ function AppContent() {
           {renderView()}
         </main>
       </div>
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <LoginModal isOpen={isLoginOpen} onClose={closeLoginModal} />
     </>
   )
 }
