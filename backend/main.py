@@ -1,3 +1,4 @@
+from typing import Union
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,7 +74,6 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "https://de-ai-pro.vercel.app",
-        "https://de-ai-mu.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
